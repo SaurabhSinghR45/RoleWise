@@ -15,6 +15,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Routes
+const authRouter = require("./routes/auth.routes");
+
+app.use("/api/auth", authRouter);
+
 // Health Check & Root Endpoints
 app.get("/", (req, res) => {
     res.status(200).json({

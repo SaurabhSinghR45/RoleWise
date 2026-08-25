@@ -1,0 +1,133 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-bg-glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-bg-glow-1 {
+  top: -10%;
+  left: 20%;
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.auth-bg-glow-2 {
+  bottom: -10%;
+  right: 20%;
+  background: rgba(6, 182, 212, 0.15);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2.25rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.auth-brand-logo svg {
+  width: 36px;
+  height: 36px;
+}
+
+.auth-brand-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.auth-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.auth-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.auth-alert {
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.auth-alert-error {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fb7185;
+}
+
+.auth-alert-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.auth-footer a {
+  font-weight: 600;
+  margin-left: 0.25rem;
+}

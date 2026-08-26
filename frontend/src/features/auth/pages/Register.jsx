@@ -17,16 +17,22 @@ const Register = () => {
   const { register, isAuthenticated, authError, clearError } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/", { replace: true });
     }
-    return () => clearError();
-  }, [isAuthenticated, navigate, clearError]);
+  }, [isAuthenticated, navigate]);
+
+  // Clear error only on component unmount
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   const handleChange = (e) => {
     setLocalError("");
-    clearError();
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -35,6 +41,8 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLocalError("");
+    clearError();
 
     if (!formData.username.trim() || !formData.email.trim() || !formData.password) {
       setLocalError("Please fill in all required fields");
@@ -63,11 +71,15 @@ const Register = () => {
         email: formData.email.trim(),
         password: formData.password,
       });
+
       if (res.success) {
         navigate("/", { replace: true });
+      } else if (res.message) {
+        setLocalError(res.message);
       }
     } catch (err) {
-      console.error(err);
+      console.error("[Register Page Error]:", err);
+      setLocalError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

@@ -93,7 +93,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const clearError = () => setAuthError(null);
+  const clearError = useCallback(() => {
+    setAuthError(null);
+  }, []);
 
   const value = {
     user,

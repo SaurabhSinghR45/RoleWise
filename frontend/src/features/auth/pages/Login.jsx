@@ -18,16 +18,22 @@ const Login = () => {
 
   const from = location.state?.from?.pathname || "/";
 
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from, { replace: true });
     }
-    return () => clearError();
-  }, [isAuthenticated, navigate, from, clearError]);
+  }, [isAuthenticated, navigate, from]);
+
+  // Clear error only on component unmount
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   const handleChange = (e) => {
     setLocalError("");
-    clearError();
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -36,6 +42,9 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLocalError("");
+    clearError();
+
     if (!formData.email.trim() || !formData.password) {
       setLocalError("Please fill in all fields");
       return;
@@ -47,11 +56,15 @@ const Login = () => {
         email: formData.email.trim(),
         password: formData.password,
       });
+
       if (res.success) {
         navigate(from, { replace: true });
+      } else if (res.message) {
+        setLocalError(res.message);
       }
     } catch (err) {
-      console.error(err);
+      console.error("[Login Page Error]:", err);
+      setLocalError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

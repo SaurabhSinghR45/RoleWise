@@ -1,0 +1,237 @@
+/* File Dropzone */
+.file-dropzone {
+  border: 2px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.4);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.file-dropzone:hover,
+.file-dropzone.drag-active {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+.file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-full);
+  color: #a5b4fc;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Generation Loading Modal */
+.generation-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 19, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.generation-modal-card {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  padding: 2.75rem 2.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(145deg, rgba(17, 24, 39, 0.95) 0%, rgba(30, 27, 75, 0.7) 100%);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(99, 102, 241, 0.3);
+}
+
+.pulsing-orb {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem auto;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 0 35px rgba(99, 102, 241, 0.6);
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 50px rgba(6, 182, 212, 0.8);
+  }
+}
+
+/* Match Score Circle Widget */
+.score-circle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: rgba(15, 23, 42, 0.8);
+  border: 4px solid var(--accent-primary);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+}
+
+.score-circle.score-excellent {
+  border-color: #10b981;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.35);
+}
+
+.score-circle.score-good {
+  border-color: #06b6d4;
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.35);
+}
+
+.score-circle.score-average {
+  border-color: #f59e0b;
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+}
+
+.score-circle.score-low {
+  border-color: #f43f5e;
+  box-shadow: 0 0 30px rgba(244, 63, 94, 0.35);
+}
+
+/* Tabs */
+.report-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.75rem;
+  overflow-x: auto;
+}
+
+.report-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.report-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.report-tab-btn.active {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+/* Accordion Item */
+.accordion-item {
+  background: rgba(17, 24, 39, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.accordion-item:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(17, 24, 39, 0.85);
+}
+
+.accordion-header {
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.accordion-content {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(11, 15, 25, 0.5);
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Severity Badges */
+.severity-high {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.severity-medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.severity-low {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* Roadmap Day Card */
+.roadmap-day-card {
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.roadmap-day-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateY(-2px);
+}

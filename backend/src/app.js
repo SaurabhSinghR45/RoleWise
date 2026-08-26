@@ -28,8 +28,10 @@ app.use(cookieParser());
 
 // Routes
 const authRouter = require("./routes/auth.routes");
+const interviewRouter = require("./routes/interview.routes");
 
 app.use("/api/auth", authRouter);
+app.use("/api/interview", interviewRouter);
 
 // Health Check & Root Endpoints
 app.get("/", (req, res) => {

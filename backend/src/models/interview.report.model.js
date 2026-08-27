@@ -65,11 +65,32 @@ const interviewReportSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        inputHash: {
+            type: String,
+            index: true,
+            default: "",
+        },
         matchScore: {
             type: Number,
             required: true,
             min: 0,
             max: 100,
+        },
+        techSkillsScore: {
+            type: Number,
+            default: 0,
+        },
+        experienceScore: {
+            type: Number,
+            default: 0,
+        },
+        architectureScore: {
+            type: Number,
+            default: 0,
+        },
+        methodologiesScore: {
+            type: Number,
+            default: 0,
         },
         summary: {
             type: String,

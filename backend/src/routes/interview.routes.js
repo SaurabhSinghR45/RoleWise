@@ -4,6 +4,7 @@ const {
     getReportById,
     getAllUserReports,
     deleteReport,
+    exportResumePDF,
 } = require("../controllers/interview.controller");
 const { authUser } = require("../middlewares/auth.middleware");
 const { uploadResume } = require("../middlewares/file.middleware");
@@ -33,6 +34,13 @@ router.get("/reports", getAllUserReports);
  * @access  Private
  */
 router.get("/report/:id", getReportById);
+
+/**
+ * @route   GET /api/interview/report/:id/pdf
+ * @desc    Export ATS-Optimized Resume PDF using Puppeteer
+ * @access  Private
+ */
+router.get("/report/:id/pdf", exportResumePDF);
 
 /**
  * @route   DELETE /api/interview/report/:id

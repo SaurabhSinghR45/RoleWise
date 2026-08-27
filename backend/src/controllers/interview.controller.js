@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const InterviewReport = require("../models/interview.report.model");
 const { generateInterviewReport } = require("../services/ai.service");
 const { extractTextFromPDF } = require("../middlewares/file.middleware");
@@ -29,6 +30,24 @@ const generateReport = async (req, res) => {
             }
         }
 
+        // Compute normalized input hash for consistency and idempotency
+        const normalizedInput = `${jobDescription.trim().toLowerCase()}:::${(resumeText || "").trim().toLowerCase()}:::${(selfDescription || "").trim().toLowerCase()}`;
+        const inputHash = crypto.createHash("sha256").update(normalizedInput).digest("hex");
+
+        // Check if identical input was already processed for this user
+        const existingReport = await InterviewReport.findOne({
+            user: req.user._id,
+            inputHash,
+        });
+
+        if (existingReport) {
+            return res.status(200).json({
+                success: true,
+                message: "Interview preparation report retrieved from cache",
+                report: existingReport,
+            });
+        }
+
         // Call Gemini AI Structured Generation Service
         const aiReport = await generateInterviewReport({
             jobDescription: jobDescription.trim(),
@@ -42,7 +61,12 @@ const generateReport = async (req, res) => {
             jobDescription: jobDescription.trim(),
             resumeText,
             selfDescription: selfDescription ? selfDescription.trim() : "",
+            inputHash,
             matchScore: aiReport.matchScore,
+            techSkillsScore: aiReport.techSkillsScore || Math.round((aiReport.matchScore * 40) / 100),
+            experienceScore: aiReport.experienceScore || Math.round((aiReport.matchScore * 30) / 100),
+            architectureScore: aiReport.architectureScore || Math.round((aiReport.matchScore * 20) / 100),
+            methodologiesScore: aiReport.methodologiesScore || Math.round((aiReport.matchScore * 10) / 100),
             summary: aiReport.summary,
             skillGaps: aiReport.skillGaps,
             technicalQuestions: aiReport.technicalQuestions,
@@ -153,9 +177,58 @@ const deleteReport = async (req, res) => {
     }
 };
 
+/**
+ * Export ATS-Optimized Resume PDF for a report
+ * @route GET /api/interview/report/:id/pdf
+ */
+const exportResumePDF = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const report = await InterviewReport.findOne({
+            _id: id,
+            user: req.user._id,
+        });
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: "Interview report not found or unauthorized",
+            });
+        }
+
+        // Generate structured, tailored 1-page ATS Resume matching the target JD
+        const { generateTailoredAtsResume } = require("../services/ai.service");
+        const { generateResumePDFBuffer } = require("../services/pdf.service");
+
+        const tailoredResumeData = await generateTailoredAtsResume({
+            resumeText: report.resumeText,
+            jobDescription: report.jobDescription,
+            selfDescription: report.selfDescription,
+            user: req.user,
+        });
+
+        const pdfBuffer = await generateResumePDFBuffer(tailoredResumeData);
+
+        const filename = `Rolewise_ATS_Resume_${id}.pdf`;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.setHeader("Content-Length", pdfBuffer.length);
+
+        return res.end(pdfBuffer);
+    } catch (error) {
+        console.error("[Export Resume PDF Error]:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to generate ATS Resume PDF",
+        });
+    }
+};
+
 module.exports = {
     generateReport,
     getReportById,
     getAllUserReports,
     deleteReport,
+    exportResumePDF,
 };

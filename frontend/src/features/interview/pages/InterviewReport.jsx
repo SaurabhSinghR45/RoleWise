@@ -14,7 +14,10 @@ import {
   Download,
   Copy,
   Check,
+  Loader2,
+  FileText,
 } from "lucide-react";
+import { downloadResumePdfApi } from "../services/interview.api";
 import "../../../styles/interview.css";
 
 const InterviewReport = ({ report, onBack }) => {
@@ -22,6 +25,8 @@ const InterviewReport = ({ report, onBack }) => {
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [completedTasks, setCompletedTasks] = useState({});
   const [copiedId, setCopiedId] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   if (!report) return null;
 
@@ -44,6 +49,29 @@ const InterviewReport = ({ report, onBack }) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isDownloading) return;
+    try {
+      setIsDownloading(true);
+      const blob = await downloadResumePdfApi(report._id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Rolewise_ATS_Resume_${report._id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    } catch (err) {
+      console.error("Failed to download ATS Resume PDF:", err);
+      alert("Failed to export ATS Resume PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const getScoreColorClass = (score) => {
@@ -78,7 +106,7 @@ const InterviewReport = ({ report, onBack }) => {
           <span>Back to Dashboard</span>
         </button>
 
-        <div style={{ display: "flex", gap: "0.75rem" }}>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
           <button
             onClick={() => handleCopy(JSON.stringify(report, null, 2), "full_report")}
             className="btn btn-secondary"
@@ -86,6 +114,35 @@ const InterviewReport = ({ report, onBack }) => {
           >
             {copiedId === "full_report" ? <Check size={16} /> : <Copy size={16} />}
             <span>{copiedId === "full_report" ? "Copied!" : "Copy Report"}</span>
+          </button>
+
+          <button
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="btn btn-primary"
+            style={{
+              background: downloadSuccess 
+                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                : "linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)",
+            }}
+            title="Download ATS-Optimized Resume PDF tailored to this Job Description"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 size={16} className="spinner" />
+                <span>Generating ATS PDF...</span>
+              </>
+            ) : downloadSuccess ? (
+              <>
+                <Check size={16} />
+                <span>PDF Downloaded!</span>
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                <span>Download ATS Resume (PDF)</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -126,9 +183,82 @@ const InterviewReport = ({ report, onBack }) => {
           </div>
 
           <h2 style={{ fontSize: "1.35rem", marginBottom: "0.5rem" }}>Executive Evaluation</h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "1.25rem" }}>
             {report.summary}
           </p>
+
+          {/* Calibrated Rubric Sub-scores for Absolute Transparency */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+              gap: "0.75rem",
+            }}
+          >
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                padding: "0.6rem 0.85rem",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Tech Stack
+              </div>
+              <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#6366f1", marginTop: "0.15rem" }}>
+                {report.techSkillsScore ?? Math.round(report.matchScore * 0.4)}<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "normal" }}>/40</span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                padding: "0.6rem 0.85rem",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Experience
+              </div>
+              <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#06b6d4", marginTop: "0.15rem" }}>
+                {report.experienceScore ?? Math.round(report.matchScore * 0.3)}<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "normal" }}>/30</span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                padding: "0.6rem 0.85rem",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Architecture
+              </div>
+              <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#ec4899", marginTop: "0.15rem" }}>
+                {report.architectureScore ?? Math.round(report.matchScore * 0.2)}<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "normal" }}>/20</span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                padding: "0.6rem 0.85rem",
+                borderRadius: "8px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Practices & Tools
+              </div>
+              <div style={{ fontSize: "1.1rem", fontWeight: "700", color: "#10b981", marginTop: "0.15rem" }}>
+                {report.methodologiesScore ?? Math.round(report.matchScore * 0.1)}<span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "normal" }}>/10</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

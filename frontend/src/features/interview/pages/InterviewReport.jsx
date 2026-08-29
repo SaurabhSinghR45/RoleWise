@@ -22,6 +22,7 @@ import {
 import { downloadResumePdfApi } from "../services/interview.api";
 import AnswerPracticeWorkshop from "../components/AnswerPracticeWorkshop";
 import KeywordRadarTab from "../components/KeywordRadarTab";
+import RoadmapTrackerTab from "../components/RoadmapTrackerTab";
 import "../../../styles/interview.css";
 
 const InterviewReport = ({ report, onBack }) => {
@@ -673,87 +674,9 @@ const InterviewReport = ({ report, onBack }) => {
         </div>
       )}
 
-      {/* TAB 4: 7-Day Roadmap */}
+      {/* TAB 4: 7-Day Roadmap (Feature 3) */}
       {activeTab === "roadmap" && (
-        <div>
-          <div style={{ marginBottom: "1.5rem" }}>
-            <h3 style={{ fontSize: "1.2rem", marginBottom: "0.3rem" }}>Structured 7-Day Preparation Plan</h3>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              Check off tasks as you complete them to track your readiness.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gap: "1.25rem" }}>
-            {report.preparationPlan?.map((dayPlan, dayIdx) => (
-              <div key={dayIdx} className="roadmap-day-card">
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                  <div
-                    style={{
-                      background: "var(--gradient-primary)",
-                      color: "#ffffff",
-                      padding: "0.25rem 0.75rem",
-                      borderRadius: "var(--radius-sm)",
-                      fontWeight: "700",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    DAY {dayPlan.day}
-                  </div>
-                  <h4 style={{ fontSize: "1.15rem" }}>{dayPlan.focus}</h4>
-                </div>
-
-                <div style={{ display: "grid", gap: "0.6rem" }}>
-                  {dayPlan.tasks?.map((task, taskIdx) => {
-                    const isDone = completedTasks[`${dayIdx}-${taskIdx}`];
-                    return (
-                      <div
-                        key={taskIdx}
-                        onClick={() => toggleTask(dayIdx, taskIdx)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.75rem",
-                          padding: "0.6rem 0.9rem",
-                          background: isDone ? "rgba(16, 185, 129, 0.08)" : "rgba(15, 23, 42, 0.6)",
-                          border: `1px solid ${isDone ? "rgba(16, 185, 129, 0.3)" : "var(--border-subtle)"}`,
-                          borderRadius: "var(--radius-sm)",
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "18px",
-                            height: "18px",
-                            borderRadius: "4px",
-                            border: `2px solid ${isDone ? "var(--accent-emerald)" : "var(--text-muted)"}`,
-                            background: isDone ? "var(--accent-emerald)" : "transparent",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#ffffff",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {isDone && <Check size={12} />}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: "0.9rem",
-                            color: isDone ? "var(--text-muted)" : "var(--text-primary)",
-                            textDecoration: isDone ? "line-through" : "none",
-                          }}
-                        >
-                          {task}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <RoadmapTrackerTab report={report} />
       )}
     </div>
   );

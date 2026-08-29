@@ -51,3 +51,10 @@ export const evaluateAnswerApi = async ({
   });
   return response.data;
 };
+
+export const updateRoadmapProgressApi = async (reportId, completedTasks) => {
+  const response = await api.patch(`/interview/report/${reportId}/roadmap-progress`, {
+    completedTasks,
+  });
+  return response.data;
+};

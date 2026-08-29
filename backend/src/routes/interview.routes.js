@@ -6,6 +6,7 @@ const {
     deleteReport,
     exportResumePDF,
     evaluateAnswer,
+    updateRoadmapProgress,
 } = require("../controllers/interview.controller");
 const { authUser } = require("../middlewares/auth.middleware");
 const { uploadResume } = require("../middlewares/file.middleware");
@@ -49,6 +50,13 @@ router.get("/report/:id/pdf", exportResumePDF);
  * @access  Private
  */
 router.post("/evaluate-answer", evaluateAnswer);
+
+/**
+ * @route   PATCH /api/interview/report/:id/roadmap-progress
+ * @desc    Save completed roadmap task keys for persistent tracking
+ * @access  Private
+ */
+router.patch("/report/:id/roadmap-progress", updateRoadmapProgress);
 
 /**
  * @route   DELETE /api/interview/report/:id

@@ -263,6 +263,49 @@ const evaluateAnswer = async (req, res) => {
     }
 };
 
+/**
+ * Update Completed Roadmap Tasks Progress
+ * @route PATCH /api/interview/report/:id/roadmap-progress
+ */
+const updateRoadmapProgress = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { completedTasks } = req.body;
+
+        if (!Array.isArray(completedTasks)) {
+            return res.status(400).json({
+                success: false,
+                message: "completedTasks must be an array of task keys",
+            });
+        }
+
+        const report = await InterviewReport.findOneAndUpdate(
+            { _id: id, user: req.user._id },
+            { $set: { completedRoadmapTasks: completedTasks } },
+            { new: true }
+        );
+
+        if (!report) {
+            return res.status(404).json({
+                success: false,
+                message: "Interview report not found or unauthorized",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Roadmap progress updated successfully",
+            completedRoadmapTasks: report.completedRoadmapTasks,
+        });
+    } catch (error) {
+        console.error("[Update Roadmap Progress Error]:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to update roadmap progress",
+        });
+    }
+};
+
 module.exports = {
     generateReport,
     getReportById,
@@ -270,4 +313,5 @@ module.exports = {
     deleteReport,
     exportResumePDF,
     evaluateAnswer,
+    updateRoadmapProgress,
 };

@@ -142,6 +142,10 @@ const interviewReportSchema = new mongoose.Schema(
                 keywordOptimizationTips: [],
             }),
         },
+        completedRoadmapTasks: {
+            type: [String],
+            default: [],
+        },
     },
     {
         timestamps: true,

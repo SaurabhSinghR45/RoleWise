@@ -77,6 +77,33 @@ const interviewReportZodSchema = z.object({
             })
         )
         .describe("Structured 7-day preparation roadmap leading up to the interview."),
+    keywordMatrix: z
+        .object({
+            matchRate: z.number().min(0).max(100).optional(),
+            matchedKeywords: z
+                .array(
+                    z.object({
+                        keyword: z.string(),
+                        category: z.string(),
+                        frequencyInResume: z.number().optional(),
+                    })
+                )
+                .optional(),
+            missingKeywords: z
+                .array(
+                    z.object({
+                        keyword: z.string(),
+                        category: z.string(),
+                        importance: z
+                            .enum(["critical", "preferred", "bonus"])
+                            .optional(),
+                        context: z.string().optional(),
+                    })
+                )
+                .optional(),
+            keywordOptimizationTips: z.array(z.string()).optional(),
+        })
+        .optional(),
 });
 
 // Standard OpenAPI Schema for Gemini structured output
@@ -167,6 +194,53 @@ const geminiResponseSchema = {
                 required: ["day", "focus", "tasks"],
             },
         },
+        keywordMatrix: {
+            type: "OBJECT",
+            properties: {
+                matchRate: {
+                    type: "INTEGER",
+                    description: "Percentage of JD keywords matched in resume (0-100)",
+                },
+                matchedKeywords: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            keyword: { type: "STRING" },
+                            category: { type: "STRING" },
+                            frequencyInResume: { type: "INTEGER" },
+                        },
+                        required: ["keyword", "category", "frequencyInResume"],
+                    },
+                },
+                missingKeywords: {
+                    type: "ARRAY",
+                    items: {
+                        type: "OBJECT",
+                        properties: {
+                            keyword: { type: "STRING" },
+                            category: { type: "STRING" },
+                            importance: {
+                                type: "STRING",
+                                enum: ["critical", "preferred", "bonus"],
+                            },
+                            context: { type: "STRING" },
+                        },
+                        required: ["keyword", "category", "importance", "context"],
+                    },
+                },
+                keywordOptimizationTips: {
+                    type: "ARRAY",
+                    items: { type: "STRING" },
+                },
+            },
+            required: [
+                "matchRate",
+                "matchedKeywords",
+                "missingKeywords",
+                "keywordOptimizationTips",
+            ],
+        },
     },
     required: [
         "techSkillsScore",
@@ -179,6 +253,7 @@ const geminiResponseSchema = {
         "technicalQuestions",
         "behavioralQuestions",
         "preparationPlan",
+        "keywordMatrix",
     ],
 };
 
@@ -347,6 +422,50 @@ const generateInterviewReport = async ({
                     ],
                 },
             ],
+            keywordMatrix: {
+                matchRate: 78,
+                matchedKeywords: [
+                    { keyword: "React 19", category: "Frameworks & AI", frequencyInResume: 3 },
+                    { keyword: "Node.js / Express", category: "Frameworks & AI", frequencyInResume: 4 },
+                    { keyword: "JavaScript / TypeScript", category: "Languages", frequencyInResume: 5 },
+                    { keyword: "MongoDB / Mongoose", category: "Databases & Cloud", frequencyInResume: 3 },
+                    { keyword: "REST API Architecture", category: "Architecture", frequencyInResume: 4 },
+                    { keyword: "JWT Authentication", category: "Security & Tools", frequencyInResume: 2 },
+                    { keyword: "Docker", category: "DevOps & Tools", frequencyInResume: 2 },
+                    { keyword: "Git / GitHub", category: "DevOps & Tools", frequencyInResume: 4 },
+                ],
+                missingKeywords: [
+                    {
+                        keyword: "Redis Caching",
+                        category: "Databases & Cloud",
+                        importance: "critical",
+                        context: "Required for distributed session caching and rate-limiting.",
+                    },
+                    {
+                        keyword: "Kubernetes (K8s)",
+                        category: "DevOps & Tools",
+                        importance: "preferred",
+                        context: "Mentioned in JD for container cluster deployment.",
+                    },
+                    {
+                        keyword: "PostgreSQL / SQL",
+                        category: "Databases & Cloud",
+                        importance: "critical",
+                        context: "Needed for ACID-compliant transactional persistence.",
+                    },
+                    {
+                        keyword: "Jest / Vitest CI",
+                        category: "Testing & QA",
+                        importance: "bonus",
+                        context: "Automated regression testing pipeline.",
+                    },
+                ],
+                keywordOptimizationTips: [
+                    "Integrate Redis caching into your project bullets (e.g. 'Engineered distributed caching layer using Redis, cutting API latency by 45%').",
+                    "Highlight SQL database modeling alongside MongoDB to prove polyglot database competence.",
+                    "Explicitly reference CI/CD testing workflows (GitHub Actions, Vitest) in your Tools section.",
+                ],
+            },
         };
         return interviewReportZodSchema.parse(mockReport);
     }
@@ -388,6 +507,11 @@ Total matchScore = Math.round(Score 1 + Score 2 + Score 3 + Score 4), strictly c
 3. Formulate 5 to 8 rigorous technical interview questions tailored precisely to the technologies in the JD, with interviewer intentions and model answers.
 4. Formulate 3 to 5 realistic behavioral questions with STAR framework guidance.
 5. Create a structured day-by-day 7-day preparation roadmap.
+6. Perform ATS Keyword Matrix extraction:
+   - Identify 8 to 15 matched keywords found in candidate's resume/profile categorized by Languages, Frameworks & AI, Databases & Cloud, DevOps & Tools, Architecture.
+   - Identify 4 to 8 missing/gap keywords explicitly required or strongly preferred by the JD.
+   - Calculate matchRate percentage = Math.round((matched / (matched + missing)) * 100).
+   - Provide 3 to 4 non-spammy, high-impact resume placement tips on how to integrate the missing keywords naturally into experience bullets.
 
 Return ONLY a valid JSON object matching the requested schema.
 `;
@@ -615,8 +739,143 @@ Return ONLY a valid JSON object matching the requested schema.
     }
 };
 
+// OpenAPI Schema for Real-Time Answer Evaluation
+const answerEvaluationOpenApiSchema = {
+    type: "OBJECT",
+    properties: {
+        score: {
+            type: "INTEGER",
+            description: "Score between 0 and 100 evaluating the response",
+        },
+        rating: {
+            type: "STRING",
+            enum: ["Needs Improvement", "Fair", "Good", "Exceptional"],
+        },
+        strengths: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: "Key points or concepts candidate articulated well",
+        },
+        missedConcepts: {
+            type: "ARRAY",
+            items: { type: "STRING" },
+            description: "Critical technical concepts, tradeoffs, or metrics candidate omitted",
+        },
+        feedback: {
+            type: "STRING",
+            description: "Constructive feedback from an Engineering Hiring Manager perspective",
+        },
+        improvedAnswerSnippet: {
+            type: "STRING",
+            description: "A polished, high-impact model phrasing of how to answer this effectively",
+        },
+    },
+    required: [
+        "score",
+        "rating",
+        "strengths",
+        "missedConcepts",
+        "feedback",
+        "improvedAnswerSnippet",
+    ],
+};
+
+/**
+ * Evaluates candidate's typed or spoken answer in real time using Gemini 3.6 Flash
+ * @param {Object} params
+ * @param {string} params.question - The interview question
+ * @param {string} [params.intention] - What interviewer is looking for
+ * @param {string} [params.expectedAnswer] - The benchmark answer
+ * @param {string} params.userAnswer - The candidate's response
+ * @param {string} [params.questionType] - "technical" | "behavioral"
+ * @returns {Promise<Object>} - Detailed answer evaluation
+ */
+const evaluateUserAnswer = async ({
+    question,
+    intention = "",
+    expectedAnswer = "",
+    userAnswer,
+    questionType = "technical",
+}) => {
+    if (!userAnswer || userAnswer.trim().length < 5) {
+        throw new Error("Please provide a substantive answer (at least 5 characters).");
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey || apiKey === "your_gemini_api_key_here" || apiKey.trim() === "") {
+        // Fallback mock evaluation
+        return {
+            score: 78,
+            rating: "Good",
+            strengths: [
+                "Directly addressed the core question promptly.",
+                "Demonstrated solid conceptual familiarity with the terminology.",
+            ],
+            missedConcepts: [
+                "Could elaborate on production error handling and edge-case fallbacks.",
+                "Mentioning specific latency, throughput, or architectural trade-offs would elevate the response.",
+            ],
+            feedback:
+                "Solid foundation! To convert this into an Exceptional answer, quantify your experience with real-world scenarios and mention failure recovery strategies.",
+            improvedAnswerSnippet: expectedAnswer || "Structure your answer with: 1) Core mechanism, 2) Trade-offs, 3) Production monitoring/handling.",
+        };
+    }
+
+    const ai = getGeminiClient();
+
+    const prompt = `
+You are Rolewise AI, an elite Technical Interview Evaluator and Senior Engineering Hiring Manager.
+Evaluate the candidate's response to the following interview question with rigorous, encouraging, and actionable feedback.
+
+--- INTERVIEW QUESTION ---
+${question}
+${intention ? `Interviewer Intention: ${intention}` : ""}
+${expectedAnswer ? `Benchmark Model Answer: ${expectedAnswer}` : ""}
+Question Domain: ${questionType.toUpperCase()}
+
+--- CANDIDATE'S SUBMITTED RESPONSE ---
+${userAnswer}
+
+--- EVALUATION CRITERIA ---
+1. Score the answer objectively from 0 to 100 based on technical accuracy, clarity, conciseness, and depth.
+2. If behavioral: Evaluate STAR framework alignment (Situation, Task, Action, Result) and authenticity.
+3. If technical: Check for architecture depth, concurrency awareness, edge cases, and terminology.
+4. Extract 2-3 specific Strengths (what they got right).
+5. Extract 2-3 Missed Concepts (crucial keywords, trade-offs, or best practices they forgot).
+6. Provide concise, constructive feedback as an expert interviewer.
+7. Provide a concise, polished model answer snippet that shows them how to deliver it at a Principal Engineer / Senior level.
+
+Return ONLY a valid JSON object matching the requested schema.
+`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: answerEvaluationOpenApiSchema,
+                temperature: 0.1,
+            },
+        });
+
+        const rawText = response.text;
+        if (!rawText) {
+            throw new Error("Empty response received from Gemini Answer Evaluator");
+        }
+
+        const parsedJson = JSON.parse(rawText);
+        return parsedJson;
+    } catch (error) {
+        console.error("[Gemini Answer Evaluation Error]:", error);
+        throw new Error(`Answer evaluation failed: ${error.message}`);
+    }
+};
+
 module.exports = {
     interviewReportZodSchema,
     generateInterviewReport,
     generateTailoredAtsResume,
+    evaluateUserAnswer,
 };

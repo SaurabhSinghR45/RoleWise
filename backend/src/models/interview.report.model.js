@@ -45,6 +45,39 @@ const prepPlanDaySchema = new mongoose.Schema(
     { _id: false }
 );
 
+const keywordMatchSchema = new mongoose.Schema(
+    {
+        keyword: { type: String, required: true },
+        category: { type: String, default: "General" },
+        frequencyInResume: { type: Number, default: 1 },
+    },
+    { _id: false }
+);
+
+const missingKeywordSchema = new mongoose.Schema(
+    {
+        keyword: { type: String, required: true },
+        category: { type: String, default: "General" },
+        importance: {
+            type: String,
+            enum: ["critical", "preferred", "bonus"],
+            default: "critical",
+        },
+        context: { type: String, default: "" },
+    },
+    { _id: false }
+);
+
+const keywordMatrixSchema = new mongoose.Schema(
+    {
+        matchRate: { type: Number, default: 0 },
+        matchedKeywords: [keywordMatchSchema],
+        missingKeywords: [missingKeywordSchema],
+        keywordOptimizationTips: [{ type: String }],
+    },
+    { _id: false }
+);
+
 const interviewReportSchema = new mongoose.Schema(
     {
         user: {
@@ -100,6 +133,15 @@ const interviewReportSchema = new mongoose.Schema(
         technicalQuestions: [technicalQuestionSchema],
         behavioralQuestions: [behavioralQuestionSchema],
         preparationPlan: [prepPlanDaySchema],
+        keywordMatrix: {
+            type: keywordMatrixSchema,
+            default: () => ({
+                matchRate: 0,
+                matchedKeywords: [],
+                missingKeywords: [],
+                keywordOptimizationTips: [],
+            }),
+        },
     },
     {
         timestamps: true,

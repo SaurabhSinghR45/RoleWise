@@ -5,6 +5,7 @@ const {
     getAllUserReports,
     deleteReport,
     exportResumePDF,
+    evaluateAnswer,
 } = require("../controllers/interview.controller");
 const { authUser } = require("../middlewares/auth.middleware");
 const { uploadResume } = require("../middlewares/file.middleware");
@@ -41,6 +42,13 @@ router.get("/report/:id", getReportById);
  * @access  Private
  */
 router.get("/report/:id/pdf", exportResumePDF);
+
+/**
+ * @route   POST /api/interview/evaluate-answer
+ * @desc    Evaluate candidate answer to an interview question
+ * @access  Private
+ */
+router.post("/evaluate-answer", evaluateAnswer);
 
 /**
  * @route   DELETE /api/interview/report/:id

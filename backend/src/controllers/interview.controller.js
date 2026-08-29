@@ -225,10 +225,49 @@ const exportResumePDF = async (req, res) => {
     }
 };
 
+/**
+ * Evaluate Candidate's Typed or Spoken Interview Answer
+ * @route POST /api/interview/evaluate-answer
+ */
+const evaluateAnswer = async (req, res) => {
+    try {
+        const { question, intention, expectedAnswer, userAnswer, questionType } = req.body;
+
+        if (!question || !userAnswer || userAnswer.trim().length < 5) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid question and an answer (at least 5 characters).",
+            });
+        }
+
+        const { evaluateUserAnswer } = require("../services/ai.service");
+        const evaluation = await evaluateUserAnswer({
+            question: question.trim(),
+            intention: intention ? intention.trim() : "",
+            expectedAnswer: expectedAnswer ? expectedAnswer.trim() : "",
+            userAnswer: userAnswer.trim(),
+            questionType: questionType || "technical",
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Answer evaluated successfully",
+            evaluation,
+        });
+    } catch (error) {
+        console.error("[Evaluate Answer Controller Error]:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to evaluate answer",
+        });
+    }
+};
+
 module.exports = {
     generateReport,
     getReportById,
     getAllUserReports,
     deleteReport,
     exportResumePDF,
+    evaluateAnswer,
 };

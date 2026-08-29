@@ -16,19 +16,31 @@ import {
   Check,
   Loader2,
   FileText,
+  Mic,
+  Target,
 } from "lucide-react";
 import { downloadResumePdfApi } from "../services/interview.api";
+import AnswerPracticeWorkshop from "../components/AnswerPracticeWorkshop";
+import KeywordRadarTab from "../components/KeywordRadarTab";
 import "../../../styles/interview.css";
 
 const InterviewReport = ({ report, onBack }) => {
-  const [activeTab, setActiveTab] = useState("overview"); // overview, technical, behavioral, roadmap
+  const [activeTab, setActiveTab] = useState("overview"); // overview, keywords, technical, behavioral, roadmap
   const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [practiceOpen, setPracticeOpen] = useState({});
   const [completedTasks, setCompletedTasks] = useState({});
   const [copiedId, setCopiedId] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   if (!report) return null;
+
+  const togglePractice = (id) => {
+    setPracticeOpen((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   const toggleQuestion = (idx) => {
     setExpandedQuestions((prev) => ({
@@ -273,6 +285,14 @@ const InterviewReport = ({ report, onBack }) => {
         </button>
 
         <button
+          className={`report-tab-btn ${activeTab === "keywords" ? "active" : ""}`}
+          onClick={() => setActiveTab("keywords")}
+        >
+          <Target size={17} />
+          <span>ATS Keyword Radar</span>
+        </button>
+
+        <button
           className={`report-tab-btn ${activeTab === "technical" ? "active" : ""}`}
           onClick={() => setActiveTab("technical")}
         >
@@ -296,6 +316,11 @@ const InterviewReport = ({ report, onBack }) => {
           <span>7-Day Roadmap</span>
         </button>
       </div>
+
+      {/* TAB 0: ATS Keyword Radar (Feature 2) */}
+      {activeTab === "keywords" && (
+        <KeywordRadarTab report={report} />
+      )}
 
       {/* TAB 1: Skill Gaps */}
       {activeTab === "overview" && (
@@ -444,6 +469,54 @@ const InterviewReport = ({ report, onBack }) => {
                           {q.expectedAnswer}
                         </div>
                       </div>
+
+                      {/* Interactive Answer Practice Workshop (Feature 1) */}
+                      <div style={{ marginTop: "1.25rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => togglePractice(`tech-${idx}`)}
+                          className="btn btn-secondary"
+                          style={{
+                            fontSize: "0.84rem",
+                            padding: "0.45rem 0.9rem",
+                            border: practiceOpen[`tech-${idx}`]
+                              ? "1px solid var(--primary)"
+                              : "1px solid var(--border-subtle)",
+                            background: practiceOpen[`tech-${idx}`]
+                              ? "rgba(99, 102, 241, 0.15)"
+                              : "rgba(255, 255, 255, 0.04)",
+                            color: practiceOpen[`tech-${idx}`]
+                              ? "#a5b4fc"
+                              : "var(--text-primary)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                          }}
+                        >
+                          <Mic
+                            size={15}
+                            color={
+                              practiceOpen[`tech-${idx}`]
+                                ? "#818cf8"
+                                : "var(--accent-primary)"
+                            }
+                          />
+                          <span>
+                            {practiceOpen[`tech-${idx}`]
+                              ? "Close Practice Workshop"
+                              : "🎙️ Practice Answering (Voice or Text)"}
+                          </span>
+                        </button>
+
+                        {practiceOpen[`tech-${idx}`] && (
+                          <AnswerPracticeWorkshop
+                            question={q.question}
+                            intention={q.intention}
+                            expectedAnswer={q.expectedAnswer}
+                            questionType="technical"
+                          />
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -542,6 +615,54 @@ const InterviewReport = ({ report, onBack }) => {
                         >
                           {q.expectedAnswer}
                         </div>
+                      </div>
+
+                      {/* Interactive Answer Practice Workshop (Feature 1) */}
+                      <div style={{ marginTop: "1.25rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => togglePractice(`beh-${idx}`)}
+                          className="btn btn-secondary"
+                          style={{
+                            fontSize: "0.84rem",
+                            padding: "0.45rem 0.9rem",
+                            border: practiceOpen[`beh-${idx}`]
+                              ? "1px solid var(--accent-cyan)"
+                              : "1px solid var(--border-subtle)",
+                            background: practiceOpen[`beh-${idx}`]
+                              ? "rgba(6, 182, 212, 0.15)"
+                              : "rgba(255, 255, 255, 0.04)",
+                            color: practiceOpen[`beh-${idx}`]
+                              ? "#67e8f9"
+                              : "var(--text-primary)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                          }}
+                        >
+                          <Mic
+                            size={15}
+                            color={
+                              practiceOpen[`beh-${idx}`]
+                                ? "#22d3ee"
+                                : "var(--accent-cyan)"
+                            }
+                          />
+                          <span>
+                            {practiceOpen[`beh-${idx}`]
+                              ? "Close Practice Workshop"
+                              : "🎙️ Practice Answering (STAR Method)"}
+                          </span>
+                        </button>
+
+                        {practiceOpen[`beh-${idx}`] && (
+                          <AnswerPracticeWorkshop
+                            question={q.question}
+                            intention={q.intention}
+                            expectedAnswer={q.expectedAnswer}
+                            questionType="behavioral"
+                          />
+                        )}
                       </div>
                     </div>
                   )}

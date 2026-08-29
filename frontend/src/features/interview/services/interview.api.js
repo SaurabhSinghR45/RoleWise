@@ -34,3 +34,20 @@ export const downloadResumePdfApi = async (id) => {
   });
   return response.data;
 };
+
+export const evaluateAnswerApi = async ({
+  question,
+  intention = "",
+  expectedAnswer = "",
+  userAnswer,
+  questionType = "technical",
+}) => {
+  const response = await api.post("/interview/evaluate-answer", {
+    question,
+    intention,
+    expectedAnswer,
+    userAnswer,
+    questionType,
+  });
+  return response.data;
+};

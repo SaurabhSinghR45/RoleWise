@@ -2,7 +2,10 @@
 
 <div align="center">
 
-![Rolewise Banner](https://img.shields.io/badge/Rolewise-AI_Career_Prep-6366f1?style=for-the-badge&logo=rocket)
+![Rolewise Banner](https://img.shields.io/badge/Rolewise-AI_Career_Platform-6366f1?style=for-the-badge&logo=rocket)
+[![Live Demo](https://img.shields.io/badge/Live_App-role--wise.vercel.app-10b981?style=for-the-badge&logo=vercel)](https://role-wise.vercel.app/)
+[![Backend API](https://img.shields.io/badge/Backend_API-Render_Cloud-46E3B7?style=for-the-badge&logo=render)](https://rolewise-backend-94co.onrender.com/api/health)
+
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb?style=flat-square&logo=react)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.21-000000?style=flat-square&logo=express)](https://expressjs.com/)
@@ -10,33 +13,51 @@
 [![Google Gemini](https://img.shields.io/badge/Gemini_3.6-Flash-4285F4?style=flat-square&logo=google)](https://aistudio.google.com/)
 [![Puppeteer](https://img.shields.io/badge/Puppeteer-ATS_PDF-40B5A4?style=flat-square&logo=puppeteer)](https://pptr.dev/)
 
-**An enterprise-grade Full-Stack AI Career Preparation & ATS Resume Engineering Platform.**  
-*Upload your resume, paste any target Job Description (JD), and receive deterministic match scoring, deep-dive technical & behavioral questions, a structured 7-day preparation roadmap, and a tailored 1-page ATS Resume PDF.*
+**An enterprise-grade Full-Stack AI Career Preparation, Mock Interview Practice & ATS Resume Engineering Platform.**  
+*Upload your resume, paste any target Job Description (JD), and receive deterministic sub-scores, live AI voice answer evaluations, Jobscan-style keyword density matrices, interactive 7-day preparation sprints, multi-role fit benchmarks, and tailored 1-page ATS Resume PDFs.*
+
+[🌐 **Explore Live Demo**](https://role-wise.vercel.app/) • [⚡ **API Health Status**](https://rolewise-backend-94co.onrender.com/api/health)
 
 </div>
 
 ---
 
-## 🌟 Key Features
+## 🌟 Game-Changing Features
 
-- **🎯 Dual-Layer Deterministic Match Scoring (Variance ≤ 1%)**:
-  - Uses an explicit 4-part mathematical rubric (`Tech Stack 40%`, `Seniority & Exp 30%`, `Architecture 20%`, `Tools 10%`) + `temperature: 0.0` with Google Gemini 3.6 Flash.
-  - Transparent sub-score metrics displayed on the dashboard for absolute user credibility.
-- **⚡ SHA-256 Input-Hash Caching**:
-  - Automatically identifies duplicate JD + Resume submissions to serve instant reports with 0% score discrepancy and 0 token latency.
-- **📄 1-Page Tailored ATS Resume Generator**:
-  - Powered by **Puppeteer** headless Chromium.
-  - Automatically aligns candidate projects with target JD keywords using the Google XYZ action-verb formula in a single-column, 100% ATS parser-compliant format.
-- **💻 Interactive Technical & Behavioral Q&A**:
-  - Collapsible accordions showing *Interviewer Intention*, *Model Answers*, and *STAR framework* situational responses.
-- **📅 7-Day Sprint Roadmap**:
-  - Actionable day-by-day checklist guiding the candidate up to interview day.
-- **🔐 Production Security & Authentication**:
-  - JWT authentication stored in HTTP-Only, SameSite cookies.
-  - Stateful token blacklisting with MongoDB 24h TTL index on logout.
-  - In-memory PDF buffer extraction (Multer memory storage, no orphaned disk files).
-- **🏛️ Strict 4-Layer React Architecture**:
-  - `Layer 4 (API Services)` ➔ `Layer 3 (Context State)` ➔ `Layer 2 (Custom Hooks)` ➔ `Layer 1 (UI Components)`.
+### 1. 🎙️ Interactive AI Mock Interview Practice (Answer Evaluator)
+- **Real-Time Voice Dictation**: Integrated with the Web Speech API for hands-free speech-to-text response practice.
+- **AI-Powered Evaluation**: Gemini 3.6 Flash grades candidate responses on an objective 0–100% scale.
+- **STAR Framework & Technical Depth**: Identifies key concepts articulated well vs. critical trade-offs omitted.
+- **Polished Model Answer Snippets**: Generates high-impact, senior-level response phrasings for every technical and behavioral question.
+
+### 2. 🔍 Visual ATS Keyword Match & Gap Radar
+- **Side-by-Side Keyword Matrix**: Evaluates resume keyword density against strict ATS parser requirements (Workday, Greenhouse, Lever).
+- **Interactive Search & Filter Pills**: Instantly filter by *All*, *🟢 Matched in Resume (with occurrence counts)*, and *🔴 Missing Gaps*.
+- **Domain Breakdown**: Categorized into *Languages*, *Frameworks & AI*, *Databases & Cloud*, *DevOps & Tools*, and *Architecture*.
+- **Strategic Placement Guidance**: Provides actionable advice on naturally integrating keywords into experience bullets without keyword stuffing.
+
+### 3. 📅 Interactive 7-Day Sprint Tracker with Cloud Persistence
+- **SVG Readiness Progress Ring**: Real-time radial progress gauge tracking total preparation completeness.
+- **Daily Sprint Cards (Days 1–7)**: Interactive checklist items with animated strike-throughs and one-click *Complete Day* toggles.
+- **Multi-Device Cloud Persistence**: Checklists automatically sync to MongoDB Atlas via `PATCH /api/interview/report/:id/roadmap-progress` so candidates can prepare across desktop and mobile.
+
+### 4. ⚖️ Multi-Role Target Comparison (Best Fit Analyzer)
+- **Top Recommended Career Track**: Automatically identifies the single role where the candidate has the highest interview clearance probability.
+- **Side-by-Side Role Benchmarks**: Compares candidate background across 4+ tech roles simultaneously (*AI Full Stack*, *Backend Python*, *Frontend React*, *GenAI/ML Systems Engineer*).
+- **Interactive Role Customizer**: Test fit against preset tracks or add custom target job titles on the fly.
+
+### 5. 📄 1-Page Tailored ATS Resume Generator
+- **Powered by Puppeteer**: Headless Chromium generates a single-column, 100% ATS-compliant PDF.
+- **Google XYZ Action-Verb Alignment**: Automatically reformulates candidate achievements to highlight target JD requirements.
+
+### 6. 🎯 Deterministic Match Scoring & SHA-256 Caching
+- **Mathematical 4-Part Rubric**: `Tech Stack 40%`, `Experience 30%`, `Architecture 20%`, `Tools & Methodology 10%` with `temperature: 0.0` ensuring zero score fluctuation.
+- **SHA-256 Input Caching**: Deduplicates identical JD + Resume submissions for instant rendering with 0 token consumption.
+
+### 7. 🔐 Enterprise Security & 4-Layer React Architecture
+- **Cookie-Based JWT Auth**: HTTP-Only, SameSite cookies with a 24-hour MongoDB TTL token blacklist.
+- **In-Memory PDF Buffer**: Zero unmanaged disk writes with Multer memory storage.
+- **Strict 4-Layer Frontend**: `Layer 4 (API)` ➔ `Layer 3 (Context)` ➔ `Layer 2 (Hooks)` ➔ `Layer 1 (UI)`.
 
 ---
 
@@ -47,12 +68,14 @@
                                   
       [ Client Browser ]  ◄── HTTPS (withCredentials) ──►  [ Frontend SPA (Vite + React 19) ]
               │                                                        │
-              │                                                 Layer 4: Axios API
+              │                                                 Layer 4: Axios Client
               ▼                                                        │
       [ Express 4 REST API ] ──────────────────────────────────────────┘
         ├── Auth Controller (bcrypt, JWT, Blacklist TTL)
         ├── Interview Controller (JD + PDF parser, SHA-256 Caching)
-        ├── Gemini 3.6 Flash Engine (Deterministic 4-Part Rubric)
+        ├── Answer Evaluator (Web Speech API + Gemini 3.6 Flash)
+        ├── ATS Keyword Radar Matrix & Multi-Role Fit Benchmark Engine
+        ├── Roadmap Progress Cloud Synchronizer (MongoDB Persistence)
         └── Puppeteer Service (1-Page ATS Single-Column PDF Generator)
               │                                      │
               ▼                                      ▼
@@ -70,25 +93,30 @@ RoleWise/
 │   │   ├── components/           # Reusable UI (Navbar, ProtectedRoute, Orb)
 │   │   ├── features/
 │   │   │   ├── auth/             # Layer 1-4 Auth Feature (Login, Register, Context)
-│   │   │   └── interview/        # Layer 1-4 Interview Feature (Report, Form, Context)
-│   │   ├── pages/                # Home / Dashboard
-│   │   ├── services/             # Axios API Client Configuration
-│   │   └── styles/               # Glassmorphism Design Tokens & CSS
+│   │   │   └── interview/        # Layer 1-4 Interview Feature
+│   │   │       ├── components/   # AnswerPracticeWorkshop, KeywordRadarTab, RoadmapTrackerTab, MultiRoleComparisonTab
+│   │   │       ├── context/      # Interview Context Provider
+│   │   │       ├── hooks/        # Custom Interview Hooks
+│   │   │       ├── pages/        # InterviewDashboard, InterviewReport, InterviewHistory
+│   │   │       └── services/     # Axios API layer for Reports, Audio/Eval, Radar & Benchmarks
+│   │   ├── pages/                # Home / Landing Page
+│   │   ├── services/             # Central Axios Client
+│   │   └── styles/               # Glassmorphism Design Tokens & CSS Animations
 │   ├── vercel.json               # SPA routing rewrite configuration for Vercel
 │   └── package.json
 │
 ├── backend/                      # Node.js + Express REST API
 │   ├── src/
 │   │   ├── config/               # MongoDB Atlas connection handler
-│   │   ├── controllers/          # Auth & Interview report controllers
+│   │   ├── controllers/          # Auth & Interview controllers (Reports, Practice, Benchmarks)
 │   │   ├── middlewares/          # JWT auth verification & Multer PDF parser
 │   │   ├── models/               # User, Blacklist (TTL), InterviewReport models
-│   │   ├── routes/               # Modular Express API routers
+│   │   ├── routes/               # Express API routers (/auth, /interview)
 │   │   └── services/             # Gemini 3.6 Flash & Puppeteer PDF generators
 │   ├── .puppeteerrc.cjs          # Chromium buildpack cache configuration
 │   ├── Dockerfile                # Production container configuration
 │   ├── render.yaml               # Render Infrastructure-As-Code configuration
-│   ├── test_suite.js             # Automated API test suite (9/9 passed)
+│   ├── test_suite.js             # Automated API test suite
 │   └── server.js                 # Server entry point
 └── README.md
 ```
@@ -124,9 +152,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-3.6-flash
 ```
 
-Run tests and start development server:
+Start the backend server:
 ```bash
-npm test            # Run automated 9-step test suite
 npm run dev         # Start backend on http://localhost:3000
 ```
 
@@ -134,6 +161,15 @@ npm run dev         # Start backend on http://localhost:3000
 ```bash
 cd ../frontend
 npm install
+```
+
+Create a `.env` file in `frontend/`:
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+Start the frontend development server:
+```bash
 npm run dev         # Start frontend on http://localhost:5173
 ```
 
@@ -141,36 +177,12 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 🌐 Production Cloud Deployment Guide
+## 🌐 Production Cloud Deployment
 
-### A. Deploy Frontend to Vercel (Recommended)
-1. Push your repository to GitHub.
-2. Log in to [Vercel](https://vercel.com/) and click **"Add New Project"**.
-3. Import your `RoleWise` repository.
-4. Set **Root Directory** to `frontend`.
-5. Under **Environment Variables**, add:
-   - `VITE_API_URL`: `https://your-backend-api.onrender.com/api`
-6. Click **Deploy**. Vercel will automatically use `vercel.json` for SPA routing!
-
----
-
-### B. Deploy Backend to Render (Recommended)
-1. Log in to [Render](https://render.com/) and click **"New +" ➔ "Web Service"**.
-2. Connect your GitHub repository.
-3. Set **Root Directory** to `backend`.
-4. Set **Runtime** to `Node` (or `Docker` for complete container isolation).
-5. Build & Start Commands:
-   - **Build Command**: `npm install`
-   - **Start Command**: `node server.js`
-6. Under **Environment Variables**, add:
-   - `NODE_ENV`: `production`
-   - `PORT`: `10000`
-   - `MONGODB_URI`: `your_mongodb_atlas_uri`
-   - `JWT_SECRET`: `your_secure_jwt_secret`
-   - `CLIENT_URL`: `https://your-rolewise-frontend.vercel.app`
-   - `GEMINI_API_KEY`: `your_gemini_api_key`
-   - `GEMINI_MODEL`: `gemini-3.6-flash`
-7. Click **Deploy**.
+| Component | Platform | Live URL | Deployment Config |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | [Vercel](https://vercel.com/) | [https://role-wise.vercel.app/](https://role-wise.vercel.app/) | `vercel.json` (SPA rewrites) |
+| **Backend** | [Render](https://render.com/) | [https://rolewise-backend-94co.onrender.com](https://rolewise-backend-94co.onrender.com) | `render.yaml` & `Dockerfile` |
 
 ---
 
@@ -188,9 +200,12 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 | Method | Endpoint | Description | Access |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/interview/generate` | Generate AI report from JD + Resume PDF | Private |
-| `GET` | `/api/interview/reports` | Get all past reports for user | Private |
+| `GET` | `/api/interview/reports` | Get all past reports for authenticated user | Private |
 | `GET` | `/api/interview/report/:id` | Get detailed single report by ID | Private |
-| `GET` | `/api/interview/report/:id/pdf` | Export & stream 1-Page ATS Resume PDF | Private |
+| `POST` | `/api/interview/evaluate-answer` | 🎙️ Live AI evaluation of typed/spoken answer | Private |
+| `PATCH` | `/api/interview/report/:id/roadmap-progress` | 📅 Save completed roadmap tasks to MongoDB | Private |
+| `POST` | `/api/interview/compare-roles` | ⚖️ Multi-role target comparison & benchmark engine | Private |
+| `GET` | `/api/interview/report/:id/pdf` | 📄 Export & stream 1-Page ATS Resume PDF | Private |
 | `DELETE` | `/api/interview/report/:id` | Delete report by ID | Private |
 | `GET` | `/api/health` | Service health status check | Public |
 

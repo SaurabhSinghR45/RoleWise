@@ -18,15 +18,17 @@ import {
   FileText,
   Mic,
   Target,
+  Compass,
 } from "lucide-react";
 import { downloadResumePdfApi } from "../services/interview.api";
 import AnswerPracticeWorkshop from "../components/AnswerPracticeWorkshop";
 import KeywordRadarTab from "../components/KeywordRadarTab";
 import RoadmapTrackerTab from "../components/RoadmapTrackerTab";
+import MultiRoleComparisonTab from "../components/MultiRoleComparisonTab";
 import "../../../styles/interview.css";
 
 const InterviewReport = ({ report, onBack }) => {
-  const [activeTab, setActiveTab] = useState("overview"); // overview, keywords, technical, behavioral, roadmap
+  const [activeTab, setActiveTab] = useState("overview"); // overview, keywords, technical, behavioral, roadmap, compare
   const [expandedQuestions, setExpandedQuestions] = useState({});
   const [practiceOpen, setPracticeOpen] = useState({});
   const [completedTasks, setCompletedTasks] = useState({});
@@ -316,11 +318,24 @@ const InterviewReport = ({ report, onBack }) => {
           <Calendar size={17} />
           <span>7-Day Roadmap</span>
         </button>
+
+        <button
+          className={`report-tab-btn ${activeTab === "compare" ? "active" : ""}`}
+          onClick={() => setActiveTab("compare")}
+        >
+          <Compass size={17} />
+          <span>Role Comparison</span>
+        </button>
       </div>
 
       {/* TAB 0: ATS Keyword Radar (Feature 2) */}
       {activeTab === "keywords" && (
         <KeywordRadarTab report={report} />
+      )}
+
+      {/* TAB 5: Multi-Role Target Comparison (Feature 4) */}
+      {activeTab === "compare" && (
+        <MultiRoleComparisonTab report={report} />
       )}
 
       {/* TAB 1: Skill Gaps */}

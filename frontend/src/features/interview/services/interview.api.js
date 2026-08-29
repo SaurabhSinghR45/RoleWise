@@ -58,3 +58,18 @@ export const updateRoadmapProgressApi = async (reportId, completedTasks) => {
   });
   return response.data;
 };
+
+export const compareRolesApi = async ({
+  reportId,
+  resumeText = "",
+  selfDescription = "",
+  targetRoles = [],
+}) => {
+  const response = await api.post("/interview/compare-roles", {
+    reportId,
+    resumeText,
+    selfDescription,
+    targetRoles,
+  });
+  return response.data;
+};

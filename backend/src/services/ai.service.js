@@ -873,9 +873,218 @@ Return ONLY a valid JSON object matching the requested schema.
     }
 };
 
+// OpenAPI Schema for Multi-Role Target Comparison
+const multiRoleComparisonOpenApiSchema = {
+    type: "OBJECT",
+    properties: {
+        recommendedBestRole: {
+            type: "STRING",
+            description:
+                "The title of the single role where the candidate has the highest interview clearance probability",
+        },
+        bestFitReasoning: {
+            type: "STRING",
+            description:
+                "2-3 sentences explaining why this candidate's specific stack, projects, and strengths give them the greatest competitive edge in this role",
+        },
+        roleComparisons: {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    roleTitle: { type: "STRING" },
+                    fitScore: {
+                        type: "INTEGER",
+                        description: "Match score between 0 and 100",
+                    },
+                    verdict: {
+                        type: "STRING",
+                        enum: [
+                            "Strong Fit",
+                            "Good Fit",
+                            "Moderate Fit",
+                            "Low Fit",
+                        ],
+                    },
+                    topStrengths: {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description:
+                            "2-3 key assets from candidate's profile matching this specific role",
+                    },
+                    keyGaps: {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description:
+                            "1-2 critical skills or tools candidate is missing for this role",
+                    },
+                    applicationAdvice: {
+                        type: "STRING",
+                        description:
+                            "Strategic resume tailoring advice if applying for this specific track",
+                    },
+                },
+                required: [
+                    "roleTitle",
+                    "fitScore",
+                    "verdict",
+                    "topStrengths",
+                    "keyGaps",
+                    "applicationAdvice",
+                ],
+            },
+        },
+    },
+    required: ["recommendedBestRole", "bestFitReasoning", "roleComparisons"],
+};
+
+/**
+ * Compares candidate background across multiple target roles simultaneously using Gemini 3.6 Flash
+ * @param {Object} params
+ * @param {string} params.resumeText - Candidate resume plaintext
+ * @param {string} [params.selfDescription] - Extra candidate details
+ * @param {Array<string>} [params.targetRoles] - List of role titles to compare
+ * @returns {Promise<Object>} - Multi-role comparative analysis
+ */
+const compareMultiRoleFit = async ({
+    resumeText = "",
+    selfDescription = "",
+    targetRoles = [],
+}) => {
+    const rolesList =
+        targetRoles && targetRoles.length > 0
+            ? targetRoles
+            : [
+                  "AI Full Stack Developer (Python + React)",
+                  "Backend Engineer (Python / FastAPI / Microservices)",
+                  "Frontend Engineer (React / TypeScript)",
+                  "GenAI / Machine Learning Systems Engineer",
+              ];
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey || apiKey === "your_gemini_api_key_here" || apiKey.trim() === "") {
+        // Fallback mock comparison
+        return {
+            recommendedBestRole:
+                "Backend Engineer (Python / FastAPI / Microservices)",
+            bestFitReasoning:
+                "Your proven experience architecting asynchronous APIs with FastAPI, multi-agent concurrency, and Docker containerization provides an immediate match for high-throughput backend services.",
+            roleComparisons: [
+                {
+                    roleTitle:
+                        "Backend Engineer (Python / FastAPI / Microservices)",
+                    fitScore: 88,
+                    verdict: "Strong Fit",
+                    topStrengths: [
+                        "Deep familiarity with Python asyncio, FastAPI REST routing, and concurrency control.",
+                        "Containerized backend deployments with Docker and clean relational/NoSQL data access.",
+                    ],
+                    keyGaps: [
+                        "Could benefit from highlighting Redis caching and Kafka/RabbitMQ message queues.",
+                    ],
+                    applicationAdvice:
+                        "Emphasize sub-second API response times and asynchronous task workers on your resume.",
+                },
+                {
+                    roleTitle: "AI Full Stack Developer (Python + React)",
+                    fitScore: 82,
+                    verdict: "Strong Fit",
+                    topStrengths: [
+                        "Complete end-to-end delivery from React 19 UI to Python AI backend services.",
+                        "Integration of LLMs and structured multi-agent pipelines.",
+                    ],
+                    keyGaps: [
+                        "TypeScript interfaces and comprehensive frontend testing (Vitest/Jest).",
+                    ],
+                    applicationAdvice:
+                        "Showcase live full-stack demo URLs and highlight your 4-layer frontend architecture.",
+                },
+                {
+                    roleTitle: "GenAI / Machine Learning Systems Engineer",
+                    fitScore: 74,
+                    verdict: "Good Fit",
+                    topStrengths: [
+                        "Practical implementation of Sentence Transformers and Hugging Face embedding pipelines.",
+                        "Autonomous multi-agent orchestration experience in CodeReviewPro.",
+                    ],
+                    keyGaps: [
+                        "Production vector database deployments (Qdrant, Pinecone) and model fine-tuning frameworks (PyTorch).",
+                    ],
+                    applicationAdvice:
+                        "Highlight embedding retrieval latencies and LLM prompt engineering techniques in project bullets.",
+                },
+                {
+                    roleTitle: "Frontend Engineer (React / TypeScript)",
+                    fitScore: 68,
+                    verdict: "Moderate Fit",
+                    topStrengths: [
+                        "Modern React 19 development with responsive glassmorphic UI tokens and custom hooks.",
+                    ],
+                    keyGaps: [
+                        "Strict TypeScript typing, Next.js SSR, and automated component testing suites.",
+                    ],
+                    applicationAdvice:
+                        "Convert a portfolio module to TypeScript and feature dynamic CSS animations prominently.",
+                },
+            ],
+        };
+    }
+
+    const ai = getGeminiClient();
+
+    const prompt = `
+You are Rolewise AI, an elite Executive Career Strategist and VP of Engineering.
+Compare the candidate's background against the following target job roles simultaneously:
+${rolesList.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+
+--- CANDIDATE INFORMATION ---
+Resume Text:
+${resumeText ? resumeText : "Candidate has strong foundational full-stack and Python background."}
+
+Self Description / Extra Details:
+${selfDescription ? selfDescription : "None provided."}
+
+--- INSTRUCTIONS ---
+1. Score the candidate's fit for EACH role from 0 to 100 based on their actual projects, languages, and technical depth.
+2. Determine which single role is their #1 RECOMMENDED BEST ROLE (highest conversion rate) and explain why in 2-3 sentences.
+3. For each role:
+   - Assign a verdict: "Strong Fit" (80-100), "Good Fit" (70-79), "Moderate Fit" (50-69), or "Low Fit" (<50).
+   - List 2 top strengths the candidate has for that specific role.
+   - List 1-2 critical skill gaps they would need to address.
+   - Give 1 tactical application advice tip for tailoring their resume to that role.
+
+Return ONLY a valid JSON object matching the requested schema.
+`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: multiRoleComparisonOpenApiSchema,
+                temperature: 0.1,
+            },
+        });
+
+        const rawText = response.text;
+        if (!rawText) {
+            throw new Error("Empty response received from Gemini Role Comparison");
+        }
+
+        const parsedJson = JSON.parse(rawText);
+        return parsedJson;
+    } catch (error) {
+        console.error("[Gemini Multi-Role Comparison Error]:", error);
+        throw new Error(`Failed to compare roles: ${error.message}`);
+    }
+};
+
 module.exports = {
     interviewReportZodSchema,
     generateInterviewReport,
     generateTailoredAtsResume,
     evaluateUserAnswer,
+    compareMultiRoleFit,
 };

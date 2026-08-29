@@ -7,6 +7,7 @@ const {
     exportResumePDF,
     evaluateAnswer,
     updateRoadmapProgress,
+    compareRoles,
 } = require("../controllers/interview.controller");
 const { authUser } = require("../middlewares/auth.middleware");
 const { uploadResume } = require("../middlewares/file.middleware");
@@ -57,6 +58,13 @@ router.post("/evaluate-answer", evaluateAnswer);
  * @access  Private
  */
 router.patch("/report/:id/roadmap-progress", updateRoadmapProgress);
+
+/**
+ * @route   POST /api/interview/compare-roles
+ * @desc    Compare candidate background across multiple target roles
+ * @access  Private
+ */
+router.post("/compare-roles", compareRoles);
 
 /**
  * @route   DELETE /api/interview/report/:id

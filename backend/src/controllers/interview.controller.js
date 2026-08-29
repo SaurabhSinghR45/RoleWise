@@ -306,6 +306,50 @@ const updateRoadmapProgress = async (req, res) => {
     }
 };
 
+/**
+ * Compare Candidate Profile Across Multiple Target Engineering Roles
+ * @route POST /api/interview/compare-roles
+ */
+const compareRoles = async (req, res) => {
+    try {
+        const { reportId, resumeText, selfDescription, targetRoles } = req.body;
+
+        let candidateResume = resumeText || "";
+        let candidateSelfDesc = selfDescription || "";
+
+        // If reportId provided, fetch resumeText from existing report
+        if (reportId && !candidateResume) {
+            const report = await InterviewReport.findOne({
+                _id: reportId,
+                user: req.user._id,
+            });
+            if (report) {
+                candidateResume = report.resumeText || "";
+                candidateSelfDesc = report.selfDescription || "";
+            }
+        }
+
+        const { compareMultiRoleFit } = require("../services/ai.service");
+        const comparison = await compareMultiRoleFit({
+            resumeText: candidateResume,
+            selfDescription: candidateSelfDesc,
+            targetRoles: Array.isArray(targetRoles) ? targetRoles : [],
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Multi-role comparison generated successfully",
+            comparison,
+        });
+    } catch (error) {
+        console.error("[Compare Roles Controller Error]:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to compare roles",
+        });
+    }
+};
+
 module.exports = {
     generateReport,
     getReportById,
@@ -314,4 +358,5 @@ module.exports = {
     exportResumePDF,
     evaluateAnswer,
     updateRoadmapProgress,
+    compareRoles,
 };

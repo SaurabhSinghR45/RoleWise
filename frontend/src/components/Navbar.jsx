@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { LogOut, User as UserIcon, Sparkles } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -18,7 +19,7 @@ const Navbar = () => {
         position: "sticky",
         top: 0,
         zIndex: 50,
-        backgroundColor: "rgba(11, 15, 25, 0.8)",
+        backgroundColor: "var(--bg-card)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         borderBottom: "1px solid var(--border-subtle)",
@@ -87,7 +88,9 @@ const Navbar = () => {
         </Link>
 
         {/* Right Navigation */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <ThemeToggle />
+
           {isAuthenticated ? (
             <>
               <div

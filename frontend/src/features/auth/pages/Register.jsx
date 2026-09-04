@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { User, Mail, Lock, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import ThemeToggle from "../../../components/ThemeToggle";
 import "../../../styles/auth.css";
 
 const Register = () => {
@@ -89,6 +90,11 @@ const Register = () => {
 
   return (
     <div className="auth-container">
+      {/* Top right theme toggle */}
+      <div style={{ position: "absolute", top: "1.5rem", right: "1.5rem", zIndex: 10 }}>
+        <ThemeToggle />
+      </div>
+
       <div className="auth-bg-glow auth-bg-glow-1" />
       <div className="auth-bg-glow auth-bg-glow-2" />
 

@@ -164,7 +164,7 @@ const RoadmapTrackerTab = ({ report }) => {
               </span>
             </div>
 
-            <h3 style={{ fontSize: "1.35rem", color: "#f8fafc", marginBottom: "0.35rem" }}>
+            <h3 style={{ fontSize: "1.35rem", color: "var(--text-primary)", marginBottom: "0.35rem" }}>
               {readinessPercent === 100
                 ? "🎉 All 7 Days Mastered! Full Interview Readiness Achieved."
                 : readinessPercent >= 70

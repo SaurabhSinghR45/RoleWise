@@ -164,7 +164,7 @@ const InterviewReport = ({ report, onBack }) => {
 
       {/* Header Match Score & Summary Banner */}
       <div
-        className="glass-panel"
+        className="glass-panel evaluation-hero-banner"
         style={{
           padding: "2.25rem",
           marginBottom: "2rem",
@@ -172,8 +172,7 @@ const InterviewReport = ({ report, onBack }) => {
           alignItems: "center",
           gap: "2.5rem",
           flexWrap: "wrap",
-          border: "1px solid rgba(99, 102, 241, 0.3)",
-          background: "linear-gradient(145deg, rgba(17, 24, 39, 0.9) 0%, rgba(30, 27, 75, 0.35) 100%)",
+          border: "1px solid var(--border-subtle)",
         }}
       >
         {/* Score Circle */}
@@ -212,10 +211,10 @@ const InterviewReport = ({ report, onBack }) => {
           >
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
+                background: "var(--bg-input)",
                 padding: "0.6rem 0.85rem",
                 borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -228,10 +227,10 @@ const InterviewReport = ({ report, onBack }) => {
 
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
+                background: "var(--bg-input)",
                 padding: "0.6rem 0.85rem",
                 borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -244,10 +243,10 @@ const InterviewReport = ({ report, onBack }) => {
 
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
+                background: "var(--bg-input)",
                 padding: "0.6rem 0.85rem",
                 borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -260,10 +259,10 @@ const InterviewReport = ({ report, onBack }) => {
 
             <div
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
+                background: "var(--bg-input)",
                 padding: "0.6rem 0.85rem",
                 borderRadius: "8px",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: "1px solid var(--border-subtle)",
               }}
             >
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -473,11 +472,11 @@ const InterviewReport = ({ report, onBack }) => {
                         <div
                           style={{
                             padding: "1.1rem 1.25rem",
-                            background: "rgba(15, 23, 42, 0.8)",
+                            background: "var(--bg-input)",
                             border: "1px solid var(--border-subtle)",
                             borderRadius: "var(--radius-sm)",
                             fontSize: "0.92rem",
-                            color: "#e2e8f0",
+                            color: "var(--text-primary)",
                             lineHeight: 1.6,
                             whiteSpace: "pre-line",
                           }}
@@ -620,11 +619,11 @@ const InterviewReport = ({ report, onBack }) => {
                         <div
                           style={{
                             padding: "1.1rem 1.25rem",
-                            background: "rgba(15, 23, 42, 0.8)",
+                            background: "var(--bg-input)",
                             border: "1px solid var(--border-subtle)",
                             borderRadius: "var(--radius-sm)",
                             fontSize: "0.92rem",
-                            color: "#e2e8f0",
+                            color: "var(--text-primary)",
                             lineHeight: 1.6,
                             whiteSpace: "pre-line",
                           }}

@@ -79,7 +79,7 @@ const Home = () => {
                   style={{
                     padding: "2.5rem 1.5rem",
                     textAlign: "center",
-                    background: "rgba(15, 23, 42, 0.4)",
+                    background: "var(--bg-input)",
                     borderRadius: "var(--radius-sm)",
                     border: "1px dashed var(--border-subtle)",
                   }}
@@ -99,9 +99,10 @@ const Home = () => {
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "1rem 1.25rem",
-                        background: "rgba(15, 23, 42, 0.65)",
+                        background: "var(--bg-input)",
                         border: "1px solid var(--border-subtle)",
                         borderRadius: "var(--radius-sm)",
+                        boxShadow: "var(--shadow-sm)",
                         transition: "all 0.2s ease",
                       }}
                     >

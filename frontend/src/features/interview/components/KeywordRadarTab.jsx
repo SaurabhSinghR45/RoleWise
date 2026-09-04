@@ -113,7 +113,7 @@ const KeywordRadarTab = ({ report }) => {
                 ATS Keyword Density Matrix
               </span>
             </div>
-            <h3 style={{ fontSize: "1.3rem", color: "#f8fafc", marginBottom: "0.35rem" }}>
+            <h3 style={{ fontSize: "1.3rem", color: "var(--text-primary)", marginBottom: "0.35rem" }}>
               {matchedKeywords.length} of {totalKeywords} Core JD Keywords Identified
             </h3>
             <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>

@@ -99,9 +99,10 @@ const Navbar = () => {
                   alignItems: "center",
                   gap: "0.5rem",
                   padding: "0.4rem 0.85rem",
-                  background: "rgba(255, 255, 255, 0.04)",
+                  background: "var(--bg-input)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-full)",
+                  boxShadow: "var(--shadow-sm)",
                   fontSize: "0.875rem",
                   color: "var(--text-primary)",
                 }}

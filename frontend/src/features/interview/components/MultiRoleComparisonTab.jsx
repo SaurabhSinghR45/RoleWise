@@ -157,7 +157,7 @@ const MultiRoleComparisonTab = ({ report }) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <Compass size={17} className="text-primary" />
-            <h4 style={{ fontSize: "0.95rem", color: "#f8fafc", fontWeight: "700" }}>
+            <h4 style={{ fontSize: "0.95rem", color: "var(--text-primary)", fontWeight: "700" }}>
               Target Role Benchmarks ({selectedRoles.length} Selected)
             </h4>
           </div>

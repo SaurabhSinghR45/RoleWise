@@ -21,15 +21,15 @@ const ThemeToggle = ({ className = "", style = {} }) => {
         width: "38px",
         height: "38px",
         borderRadius: "var(--radius-sm)",
-        background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.05)",
+        background: "var(--bg-input)",
         border: "1px solid var(--border-subtle)",
         cursor: "pointer",
         outline: "none",
         overflow: "hidden",
-        boxShadow: isDark
-          ? "0 2px 8px rgba(0, 0, 0, 0.2)"
-          : "0 2px 8px rgba(15, 23, 42, 0.06)",
-        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        boxShadow: "var(--shadow-sm)",
+        color: "var(--text-primary)",
+        transition: "all 0.2s ease",
+        flexShrink: 0,
         ...style,
       }}
     >
@@ -43,11 +43,11 @@ const ThemeToggle = ({ className = "", style = {} }) => {
           color: "#fbbf24",
           transform: isDark ? "rotate(0deg) scale(1)" : "rotate(90deg) scale(0)",
           opacity: isDark ? 1 : 0,
-          transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease",
+          transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease",
           pointerEvents: "none",
         }}
       >
-        <Sun size={19} />
+        <Sun size={17} />
       </span>
 
       {/* Moon Icon (Light Mode Active) */}
@@ -57,14 +57,14 @@ const ThemeToggle = ({ className = "", style = {} }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#4f46e5",
+          color: "var(--accent-primary)",
           transform: isDark ? "rotate(-90deg) scale(0)" : "rotate(0deg) scale(1)",
           opacity: isDark ? 0 : 1,
-          transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease",
+          transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease",
           pointerEvents: "none",
         }}
       >
-        <Moon size={18} />
+        <Moon size={17} />
       </span>
     </button>
   );

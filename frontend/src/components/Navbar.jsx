@@ -1,17 +1,12 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import { LogOut, User as UserIcon, Sparkles } from "lucide-react";
+import { Sparkles, FileText } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import ProfileDropdown from "./ProfileDropdown";
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+  const { isAuthenticated } = useAuth();
 
   return (
     <header
@@ -28,14 +23,14 @@ const Navbar = () => {
     >
       <div
         style={{
-          maxWidth: "1200px",
+          maxWidth: "1280px",
           margin: "0 auto",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        {/* Brand Logo */}
+        {/* Brand Logo - Redirects to Landing Page */}
         <Link
           to="/"
           style={{
@@ -44,6 +39,7 @@ const Navbar = () => {
             gap: "0.75rem",
             textDecoration: "none",
           }}
+          title="RoleWise Home"
         >
           <div
             style={{
@@ -89,55 +85,34 @@ const Navbar = () => {
 
         {/* Right Navigation */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <Link
+            to="/templates"
+            style={{
+              height: "38px",
+              padding: "0 0.85rem",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--bg-input)",
+              border: "1px solid var(--border-subtle)",
+              boxShadow: "var(--shadow-sm)",
+              transition: "all 0.2s ease",
+            }}
+            className="navbar-template-btn"
+          >
+            <FileText size={15} style={{ color: "var(--accent-primary)" }} />
+            <span>Resume Templates</span>
+          </Link>
+
           <ThemeToggle />
 
           {isAuthenticated ? (
-            <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.4rem 0.85rem",
-                  background: "var(--bg-input)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-full)",
-                  boxShadow: "var(--shadow-sm)",
-                  fontSize: "0.875rem",
-                  color: "var(--text-primary)",
-                }}
-              >
-                <div
-                  style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "50%",
-                    background: "rgba(99, 102, 241, 0.25)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--accent-primary)",
-                  }}
-                >
-                  <UserIcon size={14} />
-                </div>
-                <span style={{ fontWeight: 600 }}>{user?.username}</span>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="btn btn-secondary"
-                style={{
-                  padding: "0.45rem 0.9rem",
-                  fontSize: "0.85rem",
-                  borderRadius: "var(--radius-sm)",
-                }}
-                title="Log Out"
-              >
-                <LogOut size={15} />
-                <span>Logout</span>
-              </button>
-            </>
+            <ProfileDropdown />
           ) : (
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <Link

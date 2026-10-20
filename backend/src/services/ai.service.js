@@ -258,16 +258,128 @@ const geminiResponseSchema = {
 };
 
 /**
- * Initializes Gemini client instance
+ * Resolves all configured Gemini API keys from environment variables.
+ * Supports:
+ * - Comma-separated GEMINI_API_KEYS (e.g. key1,key2,key3)
+ * - Comma-separated GEMINI_API_KEY
+ * - Indexed GEMINI_API_KEY_1, GEMINI_API_KEY_2, GEMINI_API_KEY_3, ...
  */
-const getGeminiClient = () => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error(
-            "GEMINI_API_KEY is not configured in your environment variables."
-        );
+const getConfiguredGeminiKeys = () => {
+    const collected = [];
+    if (process.env.GEMINI_API_KEYS) {
+        collected.push(...process.env.GEMINI_API_KEYS.split(","));
     }
-    return new GoogleGenAI({ apiKey });
+    if (process.env.GEMINI_API_KEY) {
+        collected.push(...process.env.GEMINI_API_KEY.split(","));
+    }
+    for (let i = 1; i <= 10; i++) {
+        const k = process.env[`GEMINI_API_KEY_${i}`];
+        if (k) collected.push(k);
+    }
+
+    const uniqueKeys = Array.from(
+        new Set(
+            collected
+                .map((k) => k.trim())
+                .filter((k) => k && k !== "your_gemini_api_key_here")
+        )
+    );
+    return uniqueKeys;
+};
+
+// Global key rotation index and rate-limit cooldown tracker
+let currentKeyRotationIndex = 0;
+const exhaustedKeyCooldowns = new Map(); // apiKey -> cooldown expiry timestamp
+
+/**
+ * Gets next active Gemini client using round-robin rotation while avoiding exhausted keys
+ */
+const getActiveGeminiClient = () => {
+    const keys = getConfiguredGeminiKeys();
+    if (keys.length === 0) {
+        throw new Error("GEMINI_API_KEY is not configured in your environment variables.");
+    }
+
+    const now = Date.now();
+    for (const [k, exp] of exhaustedKeyCooldowns.entries()) {
+        if (now >= exp) exhaustedKeyCooldowns.delete(k);
+    }
+
+    for (let i = 0; i < keys.length; i++) {
+        const idx = (currentKeyRotationIndex + i) % keys.length;
+        const key = keys[idx];
+        if (!exhaustedKeyCooldowns.has(key)) {
+            currentKeyRotationIndex = (idx + 1) % keys.length;
+            return {
+                client: new GoogleGenAI({ apiKey: key }),
+                key,
+                keyIndex: idx + 1,
+                totalKeys: keys.length,
+            };
+        }
+    }
+
+    // If all are temporarily marked exhausted, fallback to rotating key
+    const fallbackKey = keys[currentKeyRotationIndex % keys.length];
+    currentKeyRotationIndex = (currentKeyRotationIndex + 1) % keys.length;
+    return {
+        client: new GoogleGenAI({ apiKey: fallbackKey }),
+        key: fallbackKey,
+        keyIndex: currentKeyRotationIndex,
+        totalKeys: keys.length,
+    };
+};
+
+/**
+ * Executes a Gemini model operation with automatic multi-key rotation and failover.
+ * If Key N hits a 429 quota or RESOURCE_EXHAUSTED error, it logs and immediately tries Key N+1.
+ */
+const executeWithGeminiFailover = async (operationName, taskFn) => {
+    const keys = getConfiguredGeminiKeys();
+    if (keys.length === 0) {
+        throw new Error("No valid GEMINI_API_KEY configured in environment variables.");
+    }
+
+    let lastError = null;
+    const attemptedKeys = new Set();
+
+    for (let attempt = 0; attempt < keys.length; attempt++) {
+        const { client, key, keyIndex, totalKeys } = getActiveGeminiClient();
+        let targetKey = key;
+        if (attemptedKeys.has(key)) {
+            const unattempted = keys.find((k) => !attemptedKeys.has(k));
+            if (!unattempted) break;
+            targetKey = unattempted;
+        }
+
+        attemptedKeys.add(targetKey);
+        const aiClient = new GoogleGenAI({ apiKey: targetKey });
+
+        try {
+            return await taskFn(aiClient);
+        } catch (error) {
+            lastError = error;
+            const errMsg = String(error?.message || "");
+            const isRateLimit =
+                errMsg.includes("429") ||
+                errMsg.includes("RESOURCE_EXHAUSTED") ||
+                errMsg.includes("quota") ||
+                error?.status === 429;
+
+            if (isRateLimit && attemptedKeys.size < keys.length) {
+                exhaustedKeyCooldowns.set(targetKey, Date.now() + 60 * 1000);
+                const nextUnattempted = keys.find((k) => !attemptedKeys.has(k));
+                console.warn(
+                    `[Rolewise AI - ${operationName}] API Key #${keys.indexOf(targetKey) + 1} reached quota limit. Automatically switching to Key #${keys.indexOf(nextUnattempted) + 1} (${attemptedKeys.size}/${keys.length} keys used)...`
+                );
+                continue;
+            }
+
+            throw error;
+        }
+    }
+
+    throw lastError || new Error("All configured Gemini API keys were exhausted.");
 };
 
 /**
@@ -470,8 +582,6 @@ const generateInterviewReport = async ({
         return interviewReportZodSchema.parse(mockReport);
     }
 
-    const ai = getGeminiClient();
-
     const prompt = `
 You are Rolewise AI, an elite technical recruiter and Principal Engineering Hiring Manager.
 Your goal is to thoroughly analyze a candidate's background against a target Job Description (JD) and produce an exhaustive, highly practical, and deterministic Interview Preparation Report.
@@ -486,15 +596,12 @@ ${selfDescription ? selfDescription : "Not provided."}
 --- TARGET JOB DESCRIPTION ---
 ${jobDescription}
 
---- SCORING RUBRIC (DETERMINISTIC 100-POINT SYSTEM) ---
-To ensure completely consistent, reproducible, and objective match scores across repeated analyses of the same input:
+--- OBJECTIVE SCORING RUBRIC (DETERMINISTIC 0-100) ---
 1. Core Technical Skills Match (Max 40 points):
-   - Identify all mandatory tech stack items in the JD (e.g. languages, frameworks, databases).
-   - Score = (Count of Candidate Matching Skills / Total Mandatory Skills in JD) * 40.
-2. Experience Level & Seniority (Max 30 points):
-   - Compare candidate's years of experience and seniority against the JD requirements.
-   - If meeting/exceeding required level: 30 points. If partially meeting: proportional points (e.g. 15-25 points). If no experience provided: 5 points.
-3. Architecture & Domain Alignment (Max 20 points):
+   - Percentage of required JD languages/frameworks found in candidate background: 0 to 40 points.
+2. Experience Level & Scope (Max 30 points):
+   - Depth of projects, seniority alignment, autonomy shown: 0 to 30 points.
+3. Architecture & Domain Competency (Max 20 points):
    - System design, scalability, cloud, microservices, or specific domain alignment: 0 to 20 points.
 4. Professional Tooling & Best Practices (Max 10 points):
    - Testing, Git, CI/CD, Agile, code review practices: 0 to 10 points.
@@ -517,14 +624,16 @@ Return ONLY a valid JSON object matching the requested schema.
 `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: geminiResponseSchema,
-                temperature: 0.0,
-            },
+        const response = await executeWithGeminiFailover("Interview Report", async (aiClient) => {
+            return await aiClient.models.generateContent({
+                model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: geminiResponseSchema,
+                    temperature: 0.0,
+                },
+            });
         });
 
         const rawText = response.text;
@@ -546,15 +655,20 @@ const atsResumeOpenApiSchema = {
     type: "OBJECT",
     properties: {
         fullName: { type: "STRING" },
+        rollNo: { type: "STRING" },
+        subHeader: { type: "STRING" },
         targetTitle: { type: "STRING" },
         contact: {
             type: "OBJECT",
             properties: {
                 email: { type: "STRING" },
+                secondaryEmail: { type: "STRING" },
                 phone: { type: "STRING" },
                 location: { type: "STRING" },
                 linkedin: { type: "STRING" },
                 github: { type: "STRING" },
+                leetcode: { type: "STRING" },
+                portfolio: { type: "STRING" },
             },
             required: ["email"],
         },
@@ -570,18 +684,33 @@ const atsResumeOpenApiSchema = {
                 required: ["category", "skills"],
             },
         },
+        experience: {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    role: { type: "STRING" },
+                    company: { type: "STRING" },
+                    duration: { type: "STRING" },
+                    location: { type: "STRING" },
+                    bullets: { type: "ARRAY", items: { type: "STRING" } },
+                    technologies: { type: "ARRAY", items: { type: "STRING" } },
+                },
+                required: ["role"],
+            },
+        },
         projects: {
             type: "ARRAY",
             items: {
                 type: "OBJECT",
                 properties: {
                     title: { type: "STRING" },
-                    subtitle: { type: "STRING" },
-                    technologies: { type: "ARRAY", items: { type: "STRING" } },
-                    bullets: { type: "ARRAY", items: { type: "STRING" } },
                     link: { type: "STRING" },
+                    duration: { type: "STRING" },
+                    bullets: { type: "ARRAY", items: { type: "STRING" } },
+                    technologies: { type: "ARRAY", items: { type: "STRING" } },
                 },
-                required: ["title", "technologies", "bullets"],
+                required: ["title"],
             },
         },
         education: {
@@ -594,7 +723,7 @@ const atsResumeOpenApiSchema = {
                     duration: { type: "STRING" },
                     score: { type: "STRING" },
                 },
-                required: ["institution", "degree"],
+                required: ["institution"],
             },
         },
         achievements: {
@@ -602,140 +731,403 @@ const atsResumeOpenApiSchema = {
             items: { type: "STRING" },
         },
     },
-    required: [
-        "fullName",
-        "targetTitle",
-        "contact",
-        "summary",
-        "technicalSkills",
-        "projects",
-        "education",
-        "achievements",
-    ],
+    required: ["fullName", "technicalSkills", "projects", "education"],
 };
 
 /**
- * Generates a tailored, ATS-compliant 1-page resume JSON structure matching the target JD
- * @param {Object} params
- * @param {string} params.resumeText - Raw candidate resume text
- * @param {string} params.jobDescription - Target Job Description
- * @param {string} [params.selfDescription] - Candidate extra details
- * @param {Object} [params.user] - User object (fallback name/email)
- * @returns {Promise<Object>} - Tailored ATS resume data
+ * Robust, high-fidelity parser that deterministically extracts ANY candidate's
+ * authentic resume sections without hallucinating fake languages, degrees, or companies.
  */
+const buildAuthenticTailoredResume = ({
+    resumeText = "",
+    jobDescription = "",
+    selfDescription = "",
+    user = {},
+    report = null,
+}) => {
+    const raw = (resumeText || "").replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g, "").trim();
+    const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+
+    // 1. Detect Standard Section Boundaries
+    const sectionDefs = [
+        { key: "summary", regex: /^(?:PROFESSIONAL SUMMARY|SUMMARY|EXECUTIVE SUMMARY|PROFILE|ABOUT ME|OBJECTIVE)$/i },
+        { key: "education", regex: /^(?:EDUCATION|ACADEMIC BACKGROUND|ACADEMIC DETAILS|ACADEMICS)$/i },
+        { key: "experience", regex: /^(?:WORK EXPERIENCE|EXPERIENCE|PROFESSIONAL EXPERIENCE|EMPLOYMENT HISTORY|INTERNSHIPS)$/i },
+        { key: "projects", regex: /^(?:PERSONAL PROJECTS|PROJECTS|KEY PROJECTS|ACADEMIC PROJECTS|FEATURED PROJECTS)$/i },
+        { key: "skills", regex: /^(?:TECHNICAL SKILLS AND INTERESTS|TECHNICAL SKILLS|SKILLS & ABILITIES|SKILLS|CORE COMPETENCIES)$/i },
+        { key: "achievements", regex: /^(?:ACHIEVEMENTS|AWARDS|AWARDS & ACHIEVEMENTS|HONORS|PUBLICATIONS|CERTIFICATIONS)$/i },
+    ];
+
+    const detected = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].replace(/^[•\-\*#§Ðï\s]+/, "").trim();
+        for (const def of sectionDefs) {
+            if (def.regex.test(line)) {
+                detected.push({ key: def.key, index: i, title: line });
+                break;
+            }
+        }
+    }
+    detected.sort((a, b) => a.index - b.index);
+
+    const headerLines = detected.length > 0 ? lines.slice(0, detected[0].index) : lines.slice(0, 6);
+    const secMap = {};
+    for (let i = 0; i < detected.length; i++) {
+        const cur = detected[i];
+        const nextIdx = i + 1 < detected.length ? detected[i + 1].index : lines.length;
+        secMap[cur.key] = lines.slice(cur.index + 1, nextIdx).filter((l) => !l.startsWith("-- "));
+    }
+
+    // --- 1. HEADER & CONTACT ---
+    let fullName = "";
+    let phone = "";
+    let email = "";
+    let secondaryEmail = "";
+    let rollNo = "";
+    let subHeader = "";
+    let linkedin = "";
+    let github = "";
+    let leetcode = "";
+    let location = "";
+
+    for (const hLine of headerLines) {
+        // Emails
+        const ems = hLine.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+        if (ems) {
+            if (!email) email = ems[0];
+            else if (!secondaryEmail && ems[0] !== email) secondaryEmail = ems[0];
+            if (ems[1] && !secondaryEmail && ems[1] !== email) secondaryEmail = ems[1];
+        }
+
+        // Phone
+        const ph = hLine.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,5}[-.\s]?\d{4,5}/);
+        if (ph && !phone) phone = ph[0].trim();
+
+        // Roll No / Student ID
+        const rm = hLine.match(/Roll\s*No\.?\s*:\s*([A-Za-z0-9]+)/i);
+        if (rm && !rollNo) rollNo = rm[1].trim();
+
+        // Degree / Subheader
+        if (/Master of|Bachelor of|MCA|B\.?Tech|M\.?Tech|Computer Applications/i.test(hLine) && !subHeader) {
+            const m = hLine.match(/(?:Master|Bachelor)[^#|ƒ§\n]+/i) || hLine.match(/MCA/i);
+            if (m) subHeader = m[0].trim();
+        }
+
+        // Links
+        const gh = hLine.match(/github\.com\/([^\s#|•§ï]+)/i);
+        if (gh && !github) github = "https://" + gh[0];
+
+        const li = hLine.match(/linkedin\.com\/in\/([^\s#|•§ï]+)/i);
+        if (li && !linkedin) linkedin = "https://" + li[0];
+
+        const lc = hLine.match(/leetcode\.com\/([^\s#|•§ï]+)/i);
+        if (lc && !leetcode) leetcode = "https://" + lc[0];
+
+        // Explicit location (e.g. City, Country or Location: ...)
+        const locMatch = hLine.match(/(?:Location|Address|City):\s*([^\n\r|#]+)/i);
+        if (locMatch && !location) location = locMatch[1].trim();
+
+        // Full Name extraction (line 0 or before special symbols)
+        if (!fullName) {
+            const clean = hLine.split(/[ƒ#|•§ï\+]/)[0].replace(/[^a-zA-Z\s.-]/g, "").trim();
+            const words = clean.split(/\s+/);
+            if (words.length >= 1 && words.length <= 4 && clean.length >= 3 && clean.length <= 35) {
+                fullName = clean;
+            }
+        }
+    }
+
+    if (!fullName) fullName = user.username || "Candidate Profile";
+
+    // Recover links from body if not in header
+    if (!github) {
+        const ghBody = raw.match(/(?:https?:\/\/)?github\.com\/([a-zA-Z0-9-_]+)/i);
+        if (ghBody && ghBody[1] && !["rate-limiter-gateway", "skillswap", "topics", "features"].includes(ghBody[1].toLowerCase())) {
+            github = "https://github.com/" + ghBody[1];
+        }
+    }
+
+    // --- 2. AUTHENTIC SUMMARY ---
+    let summary = "";
+    if (secMap.summary && secMap.summary.length > 0) {
+        summary = secMap.summary.join(" ").replace(/^[•\-\*]\s*/, "").trim();
+    }
+
+    // --- 3. EDUCATION ---
+    const education = [];
+    if (secMap.education) {
+        const eduLines = secMap.education;
+        let currentEdu = null;
+
+        for (let i = 0; i < eduLines.length; i++) {
+            const rawLine = eduLines[i].trim();
+            if (!rawLine) continue;
+            const line = rawLine.replace(/[\u2013\u2014]/g, "-");
+
+            const dateMatch = line.match(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*-\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\d{4}|Present)/i);
+            const scoreMatch = line.match(/(?:CGPA|Percentage|Score|GPA)\s*:\s*[\d.]+%?/i);
+            const isInst = /(?:Institute|University|College|School|Academy|HNBGU|NIT|IIT|IIIT|BITS)/i.test(line);
+
+            if (dateMatch || isInst) {
+                if (currentEdu) education.push(currentEdu);
+                const instPart = line.replace(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*-\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\d{4}|Present)/i, "").trim().replace(/[-–,]+$/, "").trim();
+                currentEdu = {
+                    institution: instPart || line,
+                    duration: dateMatch ? dateMatch[0].trim() : "",
+                    degree: "",
+                    score: scoreMatch ? scoreMatch[0].trim() : "",
+                };
+            } else if (currentEdu) {
+                let degPart = line;
+                if (scoreMatch) {
+                    degPart = degPart.replace(scoreMatch[0], "").trim().replace(/[-–,]+$/, "").trim();
+                    if (!currentEdu.score) currentEdu.score = scoreMatch[0].trim();
+                }
+                if (!currentEdu.degree) currentEdu.degree = degPart;
+                else currentEdu.degree += " " + degPart;
+            }
+        }
+        if (currentEdu) education.push(currentEdu);
+    }
+
+    // --- 4. WORK EXPERIENCE ---
+    const experience = [];
+    if (secMap.experience) {
+        const expLines = secMap.experience;
+        let currentExp = null;
+
+        for (let i = 0; i < expLines.length; i++) {
+            const rawLine = expLines[i].trim();
+            if (!rawLine) continue;
+            const line = rawLine.replace(/[\u2013\u2014]/g, "-");
+            const cleanLine = line.replace(/^[•\-\*–]\s*/, "").trim();
+
+            const dateMatch = line.match(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*-\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\d{4}|Present)/i);
+            const isBullet = /^[•\-\*–]/.test(line);
+            const isTech = /^(?:Technologies Used|Tools|Tech Stack)\s*:/i.test(cleanLine);
+
+            if (dateMatch && !isBullet) {
+                if (currentExp) experience.push(currentExp);
+                const roleName = line.replace(/(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\d{4}\s*-\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\d{4}|Present)/i, "").trim().replace(/[-–,]+$/, "").trim();
+                currentExp = {
+                    role: roleName || line,
+                    company: "",
+                    duration: dateMatch[0].trim(),
+                    bullets: [],
+                    technologies: [],
+                };
+            } else if (currentExp && !currentExp.company && !isBullet && !isTech) {
+                currentExp.company = cleanLine;
+            } else if (currentExp && isTech) {
+                const rawTech = cleanLine.replace(/^(?:Technologies Used|Tools|Tech Stack)\s*:\s*/i, "").trim();
+                currentExp.technologies = rawTech.split(/[,|•]/).map((s) => s.trim()).filter(Boolean);
+            } else if (currentExp && isBullet) {
+                currentExp.bullets.push(cleanLine);
+            } else if (currentExp && currentExp.bullets.length > 0) {
+                const last = currentExp.bullets.length - 1;
+                if (currentExp.bullets[last].endsWith("-")) {
+                    currentExp.bullets[last] = currentExp.bullets[last].slice(0, -1) + cleanLine;
+                } else {
+                    currentExp.bullets[last] += " " + cleanLine;
+                }
+            }
+        }
+        if (currentExp) experience.push(currentExp);
+    }
+
+    // --- 5. PERSONAL PROJECTS ---
+    const projects = [];
+    if (secMap.projects) {
+        const projLines = secMap.projects;
+        let currentProj = null;
+        let prevWasTech = false;
+
+        for (let i = 0; i < projLines.length; i++) {
+            const rawLine = projLines[i].trim();
+            if (!rawLine) continue;
+            const line = rawLine.replace(/[\u2013\u2014]/g, "-");
+            const cleanLine = line.replace(/^[•\-\*–]\s*/, "").trim();
+
+            const isTech = /^(?:Technologies Used|Tools|Tech Stack)\s*:/i.test(cleanLine);
+            const hasLink = /(?:github\.com|https?:\/\/)/i.test(line);
+            const isBullet = /^[•\-\*–]/.test(line) && !isTech;
+
+            const isProjectHeader = !isBullet && !isTech && (hasLink || !currentProj || prevWasTech);
+
+            if (isProjectHeader) {
+                if (currentProj) projects.push(currentProj);
+                const linkMatch = line.match(/(?:https?:\/\/)?(?:github\.com\/[^\s•§ï|]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^\s•§ï|]+)/i);
+                const titlePart = line.split(/[§|•]/)[0].replace(/[-–]\s*$/, "").trim();
+                currentProj = {
+                    title: titlePart || line,
+                    link: linkMatch ? (linkMatch[0].startsWith("http") ? linkMatch[0] : "https://" + linkMatch[0]) : "",
+                    bullets: [],
+                    technologies: [],
+                };
+                prevWasTech = false;
+            } else if (currentProj && isTech) {
+                const rawTech = cleanLine.replace(/^(?:Technologies Used|Tools|Tech Stack)\s*:/i, "").trim();
+                currentProj.technologies = rawTech.split(/[,|•]/).map((s) => s.trim()).filter(Boolean);
+                prevWasTech = true;
+            } else if (currentProj && isBullet) {
+                currentProj.bullets.push(cleanLine);
+                prevWasTech = false;
+            } else if (currentProj && currentProj.bullets.length > 0) {
+                const last = currentProj.bullets.length - 1;
+                if (currentProj.bullets[last].endsWith("-")) {
+                    currentProj.bullets[last] = currentProj.bullets[last].slice(0, -1) + cleanLine;
+                } else {
+                    currentProj.bullets[last] += " " + cleanLine;
+                }
+                prevWasTech = false;
+            }
+        }
+        if (currentProj) projects.push(currentProj);
+    }
+
+    // --- 6. TECHNICAL SKILLS ---
+    const technicalSkills = [];
+    if (secMap.skills) {
+        const skillLines = secMap.skills;
+        for (const line of skillLines) {
+            const parts = line.split(":");
+            if (parts.length >= 2) {
+                const category = parts[0].replace(/^[•\-\*]\s*/, "").trim();
+                const skillsStr = parts.slice(1).join(":").trim();
+                if (category && skillsStr) {
+                    technicalSkills.push({
+                        category,
+                        skills: skillsStr.split(/[,|•]/).map((s) => s.trim()).filter(Boolean),
+                    });
+                }
+            }
+        }
+    }
+
+    // --- 7. ACHIEVEMENTS ---
+    const achievements = [];
+    if (secMap.achievements) {
+        for (const line of secMap.achievements) {
+            const clean = line.replace(/^[•\-\*]\s*/, "").trim();
+            if (clean && clean !== "-- 1 of 1 --" && clean.length > 8) {
+                achievements.push(clean);
+            }
+        }
+    }
+
+    // Target Role Title derivation from JD
+    let targetTitle = "";
+    if (jobDescription) {
+        const jdLines = jobDescription.split("\n").map((l) => l.trim()).filter(Boolean);
+        for (const jLine of jdLines) {
+            const m = jLine.match(/(?:Job Title|Role|Position|Opening):\s*([^\n\r,]+)/i);
+            if (m && m[1]) {
+                targetTitle = m[1].trim();
+                break;
+            }
+        }
+        if (!targetTitle && jdLines.length > 0 && jdLines[0].length < 60) {
+            targetTitle = jdLines[0].replace(/^(?:Role|Job|Position|Hiring for)\s*:\s*/i, "").trim();
+        }
+    }
+
+    return {
+        fullName,
+        phone,
+        email,
+        secondaryEmail,
+        rollNo,
+        subHeader: subHeader || targetTitle,
+        targetTitle,
+        contact: {
+            phone,
+            email,
+            secondaryEmail,
+            location,
+            linkedin,
+            github,
+            leetcode,
+        },
+        summary,
+        education,
+        experience,
+        projects,
+        technicalSkills,
+        achievements,
+    };
+};
+
 const generateTailoredAtsResume = async ({
     resumeText = "",
     jobDescription = "",
     selfDescription = "",
     user = {},
+    report = null,
 }) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 1. First parse the authentic data from the candidate's actual resume
+    const authenticData = buildAuthenticTailoredResume({
+        resumeText,
+        jobDescription,
+        selfDescription,
+        user,
+        report,
+    });
 
-    if (!apiKey || apiKey === "your_gemini_api_key_here" || apiKey.trim() === "") {
-        // Fallback mock tailored resume data
-        return {
-            fullName: user.username || "Saurabh Singh",
-            targetTitle: "AI Full Stack Developer",
-            contact: {
-                email: user.email || "samratsaurabh2003@gmail.com",
-                phone: "+91-8545027066",
-                location: "Warangal, India",
-                linkedin: "https://linkedin.com/in/saurabh-singh",
-                github: "https://github.com/SaurabhSinghR45",
-            },
-            summary: "Results-driven Full Stack AI Developer and MCA student at NIT Warangal with proven expertise in Python, FastAPI, React 19, and asynchronous system architecture (asyncio). Experienced in architecting autonomous multi-agent pipelines, semantic embedding search systems, and high-performance containerized REST APIs with AppSec compliance.",
-            technicalSkills: [
-                { category: "Languages", skills: ["Python", "JavaScript", "C++", "Java", "SQL", "HTML5", "CSS3"] },
-                { category: "Frameworks & AI", skills: ["FastAPI", "React 19", "LLM Multi-Agent Systems", "Sentence Transformers", "Hugging Face", "Tailwind CSS", "Pydantic", "SQLAlchemy"] },
-                { category: "Databases & Storage", skills: ["SQLite", "PostgreSQL (Familiar)", "Vector Embeddings", "Relational Modeling"] },
-                { category: "Tools & DevOps", skills: ["Docker", "Git", "GitHub", "Postman", "Asyncio", "Monaco Editor", "REST APIs"] },
-            ],
-            projects: [
-                {
-                    title: "CodeReviewPro – Autonomous Multi-Agent Code Intelligence Platform",
-                    technologies: ["Python", "FastAPI", "React 19", "Docker", "Multi-Agent AI", "Tailwind CSS"],
-                    link: "https://github.com/SaurabhSinghR45",
-                    bullets: [
-                        "Architected an enterprise-grade automated code audit platform executing 4 parallel specialist agents (Style, Bug, AppSec, Performance) via asynchronous orchestration to deliver comprehensive PR reviews.",
-                        "Engineered universal GitHub repository inspection with interactive syntax-highlighted Git diff fixes, OWASP/CWE security scanning, and containerized deployment with sub-second response times.",
-                        "Constructed a responsive developer UI in React 19 and Tailwind CSS integrating Monaco Editor for live side-by-side code diff visualization.",
-                    ],
-                },
-                {
-                    title: "VibeSync – AI-Powered Music Recommendation Engine",
-                    technologies: ["Python", "Sentence Transformers", "Hugging Face", "Spotify API", "Tailwind CSS"],
-                    link: "https://github.com/SaurabhSinghR45",
-                    bullets: [
-                        "Developed a hybrid AI recommendation engine suggesting tracks using semantic similarity embeddings generated via Sentence Transformers on lyrics and natural language queries.",
-                        "Integrated Hugging Face emotion detection models and Spotify Web API to dynamically serve personalized track playlists with sub-300ms retrieval latency.",
-                    ],
-                },
-            ],
-            education: [
-                {
-                    institution: "National Institute of Technology, Warangal",
-                    degree: "Master of Computer Applications (MCA)",
-                    duration: "2024 – 2027",
-                    score: "CGPA: 7.30",
-                },
-                {
-                    institution: "Lucknow Christian Degree College, Lucknow",
-                    degree: "Bachelor of Science (B.Sc)",
-                    duration: "2020 – 2023",
-                    score: "73.42%",
-                },
-            ],
-            achievements: [
-                "Solved 550+ Data Structures and Algorithms problems across LeetCode and GeeksforGeeks (GFG).",
-                "Architected and deployed CodeReviewPro, an autonomous multi-agent developer platform with parallel async AI pipelines and automated AppSec auditing.",
-            ],
-        };
+    // If the candidate provided an authentic resume with projects or experience,
+    // use their authentic extracted data directly to ensure 100% fidelity without hallucinations.
+    if (authenticData.projects.length > 0 || authenticData.experience.length > 0 || authenticData.education.length > 0) {
+        return authenticData;
     }
 
-    const ai = getGeminiClient();
+    // 2. If no resume text was uploaded (e.g. only selfDescription), use Gemini with schema
+    const keys = getConfiguredGeminiKeys();
+    if (keys.length === 0) {
+        return authenticData;
+    }
 
     const prompt = `
-You are an expert Executive Resume Writer and ATS Optimization Specialist.
-Your task is to take the candidate's authentic resume data and tailor it strictly for the target Job Description to maximize ATS (Applicant Tracking System) keyword match, clarity, and recruiter appeal.
+You are an expert Resume Writer and ATS Optimization Specialist.
+Your task is to structure the candidate's profile into an ATS-compliant resume strictly using their real experience and background.
 
---- CANDIDATE'S AUTHENTIC RESUME & PROFILE ---
-${resumeText ? resumeText : "Candidate Name: " + (user.username || "Candidate Profile") + "\nEmail: " + (user.email || "candidate@example.com")}
-${selfDescription ? "\nAdditional Candidate Info: " + selfDescription : ""}
+--- CANDIDATE INFORMATION ---
+Candidate Name: ${authenticData.fullName || user.username || "Candidate Profile"}
+Email: ${authenticData.email || user.email || "candidate@example.com"}
+${selfDescription ? "Background & Details: " + selfDescription : ""}
 
 --- TARGET JOB DESCRIPTION ---
 ${jobDescription}
 
 --- INSTRUCTIONS ---
-1. Extract the candidate's real name, education history, and projects accurately from their uploaded resume. NEVER hallucinate fake companies or fake degrees.
-2. Refine the Professional Summary to be a compelling 3-4 sentence pitch tailored specifically to the target role with strong technical keywords from the JD.
-3. Optimize the Project bullets using the Google XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]" with strong action verbs (Architected, Spearheaded, Engineered, Integrated, Containerized).
-4. Organize Technical Skills into clean, ATS-scannable categories (Languages, Frameworks & AI, Databases & Storage, Developer Tools & DevOps).
-5. Ensure all data fits into a clean, 1-page format without fluff.
-
-Return ONLY a valid JSON object matching the requested schema.
+1. Use ONLY the candidate's authentic information. NEVER hallucinate fake companies, degrees, or unmentioned programming languages.
+2. Structure the data cleanly into the requested schema.
+3. Return ONLY a valid JSON object matching the requested schema.
 `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: atsResumeOpenApiSchema,
-                temperature: 0.1,
-            },
+        const response = await executeWithGeminiFailover("ATS Resume Generator", async (aiClient) => {
+            return await aiClient.models.generateContent({
+                model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: atsResumeOpenApiSchema,
+                    temperature: 0.1,
+                },
+            });
         });
 
         const rawText = response.text;
         if (!rawText) {
-            throw new Error("Empty response received from Gemini ATS Resume generator");
+            return authenticData;
         }
 
         const parsedJson = JSON.parse(rawText);
         return parsedJson;
     } catch (error) {
-        console.error("[Gemini ATS Resume Generator Error]:", error);
-        throw new Error(`Failed to generate tailored ATS Resume: ${error.message}`);
+        console.warn(
+            `[Gemini ATS Resume Generator]: Fallback to authentic parser (${error.message})`
+        );
+        return authenticData;
     }
 };
 
@@ -822,8 +1214,6 @@ const evaluateUserAnswer = async ({
         };
     }
 
-    const ai = getGeminiClient();
-
     const prompt = `
 You are Rolewise AI, an elite Technical Interview Evaluator and Senior Engineering Hiring Manager.
 Evaluate the candidate's response to the following interview question with rigorous, encouraging, and actionable feedback.
@@ -850,14 +1240,16 @@ Return ONLY a valid JSON object matching the requested schema.
 `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: answerEvaluationOpenApiSchema,
-                temperature: 0.1,
-            },
+        const response = await executeWithGeminiFailover("Answer Evaluator", async (aiClient) => {
+            return await aiClient.models.generateContent({
+                model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: answerEvaluationOpenApiSchema,
+                    temperature: 0.1,
+                },
+            });
         });
 
         const rawText = response.text;
@@ -1031,8 +1423,6 @@ const compareMultiRoleFit = async ({
         };
     }
 
-    const ai = getGeminiClient();
-
     const prompt = `
 You are Rolewise AI, an elite Executive Career Strategist and VP of Engineering.
 Compare the candidate's background against the following target job roles simultaneously:
@@ -1058,14 +1448,16 @@ Return ONLY a valid JSON object matching the requested schema.
 `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: multiRoleComparisonOpenApiSchema,
-                temperature: 0.1,
-            },
+        const response = await executeWithGeminiFailover("Multi-Role Comparison", async (aiClient) => {
+            return await aiClient.models.generateContent({
+                model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: multiRoleComparisonOpenApiSchema,
+                    temperature: 0.1,
+                },
+            });
         });
 
         const rawText = response.text;

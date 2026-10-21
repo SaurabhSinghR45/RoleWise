@@ -37,8 +37,8 @@ const Home = () => {
       <main
         style={{
           flex: 1,
-          padding: "2.5rem 1.5rem 4rem 1.5rem",
-          maxWidth: "1200px",
+          padding: "2rem 1.5rem 4rem 1.5rem",
+          maxWidth: "1320px",
           margin: "0 auto",
           width: "100%",
         }}

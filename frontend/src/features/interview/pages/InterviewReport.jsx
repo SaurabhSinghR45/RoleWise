@@ -25,6 +25,7 @@ import AnswerPracticeWorkshop from "../components/AnswerPracticeWorkshop";
 import KeywordRadarTab from "../components/KeywordRadarTab";
 import RoadmapTrackerTab from "../components/RoadmapTrackerTab";
 import MultiRoleComparisonTab from "../components/MultiRoleComparisonTab";
+import CustomTemplateDropdown from "../../../components/CustomTemplateDropdown";
 import "../../../styles/interview.css";
 
 const InterviewReport = ({ report, onBack }) => {
@@ -66,15 +67,20 @@ const InterviewReport = ({ report, onBack }) => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDownloadPDF = async () => {
+  const [selectedExportTemplate, setSelectedExportTemplate] = useState(
+    report.selectedTemplate || "nitw"
+  );
+
+  const handleDownloadPDF = async (templateOverride) => {
     if (isDownloading) return;
+    const tmpl = templateOverride || selectedExportTemplate || report.selectedTemplate || "nitw";
     try {
       setIsDownloading(true);
-      const blob = await downloadResumePdfApi(report._id);
+      const blob = await downloadResumePdfApi(report._id, tmpl);
       const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `Rolewise_ATS_Resume_${report._id}.pdf`);
+      link.setAttribute("download", `Rolewise_${tmpl.toUpperCase()}_Resume_${report._id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -83,7 +89,17 @@ const InterviewReport = ({ report, onBack }) => {
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
       console.error("Failed to download ATS Resume PDF:", err);
-      alert("Failed to export ATS Resume PDF. Please try again.");
+      let errMsg = "Failed to export ATS Resume PDF. Please try again.";
+      try {
+        if (err?.response?.data instanceof Blob) {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed?.message) errMsg = parsed.message;
+        } else if (err?.response?.data?.message) {
+          errMsg = err.response.data.message;
+        }
+      } catch (_) {}
+      alert(errMsg);
     } finally {
       setIsDownloading(false);
     }
@@ -104,7 +120,7 @@ const InterviewReport = ({ report, onBack }) => {
   };
 
   return (
-    <div style={{ maxWidth: "1100px", margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: "1320px", margin: "0 auto", width: "100%", padding: "0 1rem" }}>
       {/* Top Navigation & Actions */}
       <div
         style={{
@@ -131,8 +147,14 @@ const InterviewReport = ({ report, onBack }) => {
             <span>{copiedId === "full_report" ? "Copied!" : "Copy Report"}</span>
           </button>
 
+          {/* Modern Custom Template Selector Dropdown */}
+          <CustomTemplateDropdown
+            value={selectedExportTemplate}
+            onChange={(tmplId) => setSelectedExportTemplate(tmplId)}
+          />
+
           <button
-            onClick={handleDownloadPDF}
+            onClick={() => handleDownloadPDF(selectedExportTemplate)}
             disabled={isDownloading}
             className="btn btn-primary"
             style={{
@@ -140,12 +162,12 @@ const InterviewReport = ({ report, onBack }) => {
                 ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                 : "linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)",
             }}
-            title="Download ATS-Optimized Resume PDF tailored to this Job Description"
+            title="Download ATS-Optimized Resume PDF in selected template"
           >
             {isDownloading ? (
               <>
                 <Loader2 size={16} className="spinner" />
-                <span>Generating ATS PDF...</span>
+                <span>Generating PDF...</span>
               </>
             ) : downloadSuccess ? (
               <>
@@ -155,7 +177,7 @@ const InterviewReport = ({ report, onBack }) => {
             ) : (
               <>
                 <Download size={16} />
-                <span>Download ATS Resume (PDF)</span>
+                <span>Export Resume PDF</span>
               </>
             )}
           </button>
@@ -519,7 +541,7 @@ const InterviewReport = ({ report, onBack }) => {
                           <span>
                             {practiceOpen[`tech-${idx}`]
                               ? "Close Practice Workshop"
-                              : "🎙️ Practice Answering (Voice or Text)"}
+                              : "Practice Answering (Voice or Text)"}
                           </span>
                         </button>
 
@@ -666,7 +688,7 @@ const InterviewReport = ({ report, onBack }) => {
                           <span>
                             {practiceOpen[`beh-${idx}`]
                               ? "Close Practice Workshop"
-                              : "🎙️ Practice Answering (STAR Method)"}
+                              : "Practice Answering (STAR Method)"}
                           </span>
                         </button>
 

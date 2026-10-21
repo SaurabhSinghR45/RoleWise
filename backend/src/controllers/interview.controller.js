@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const InterviewReport = require("../models/interview.report.model");
 const { generateInterviewReport } = require("../services/ai.service");
-const { extractTextFromPDF } = require("../middlewares/file.middleware");
+const { extractTextFromPDF, extractTextFromFile } = require("../middlewares/file.middleware");
 
 /**
  * Generate a new interview preparation report
@@ -9,23 +9,46 @@ const { extractTextFromPDF } = require("../middlewares/file.middleware");
  */
 const generateReport = async (req, res) => {
     try {
-        const { jobDescription, selfDescription } = req.body;
+        let { jobDescription, selfDescription } = req.body;
+        jobDescription = (jobDescription || "").trim();
+
+        // Check if a Job Description document (PDF, DOCX, TXT) was uploaded
+        const jdUploadedFile = req.jdFile || (req.files && req.files.jdFile && req.files.jdFile[0]);
+        if (jdUploadedFile) {
+            try {
+                const extractedJdText = await extractTextFromFile(jdUploadedFile);
+                if (extractedJdText) {
+                    if (jobDescription) {
+                        jobDescription = `${jobDescription}\n\n[Uploaded JD Document]:\n${extractedJdText}`;
+                    } else {
+                        jobDescription = extractedJdText;
+                    }
+                }
+            } catch (jdErr) {
+                return res.status(400).json({
+                    success: false,
+                    message: jdErr.message || "Failed to parse uploaded Job Description document",
+                });
+            }
+        }
 
         if (!jobDescription || jobDescription.trim().length < 20) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide a detailed Job Description (at least 20 characters)",
+                message:
+                    "Please provide a detailed Job Description (at least 20 characters) or upload a JD file (.pdf, .doc, .docx, .txt)",
             });
         }
 
         let resumeText = "";
-        if (req.file) {
+        const resumeUploadedFile = req.file || (req.files && req.files.resume && req.files.resume[0]);
+        if (resumeUploadedFile) {
             try {
-                resumeText = await extractTextFromPDF(req.file.buffer);
+                resumeText = await extractTextFromFile(resumeUploadedFile);
             } catch (fileErr) {
                 return res.status(400).json({
                     success: false,
-                    message: fileErr.message || "Failed to parse uploaded PDF resume",
+                    message: fileErr.message || "Failed to parse uploaded resume document",
                 });
             }
         }
@@ -33,6 +56,7 @@ const generateReport = async (req, res) => {
         // Compute normalized input hash for consistency and idempotency
         const normalizedInput = `${jobDescription.trim().toLowerCase()}:::${(resumeText || "").trim().toLowerCase()}:::${(selfDescription || "").trim().toLowerCase()}`;
         const inputHash = crypto.createHash("sha256").update(normalizedInput).digest("hex");
+
 
         // Check if identical input was already processed for this user
         const existingReport = await InterviewReport.findOne({
@@ -55,6 +79,23 @@ const generateReport = async (req, res) => {
             selfDescription: selfDescription ? selfDescription.trim() : "",
         });
 
+        const selectedTemplate = req.body.selectedTemplate || "nitw";
+
+        // Pre-parse authentic tailored resume data so PDF generation is instant (<300ms) without AI re-queries
+        let preCachedResumeData = null;
+        try {
+            const { buildAuthenticTailoredResume } = require("../services/ai.service");
+            preCachedResumeData = buildAuthenticTailoredResume({
+                resumeText,
+                jobDescription: jobDescription.trim(),
+                selfDescription: selfDescription ? selfDescription.trim() : "",
+                user: req.user,
+                report: aiReport,
+            });
+        } catch (cacheErr) {
+            console.warn("[Pre-cache Resume Data Notice]:", cacheErr.message);
+        }
+
         // Save report to database
         const savedReport = await InterviewReport.create({
             user: req.user._id,
@@ -62,6 +103,7 @@ const generateReport = async (req, res) => {
             resumeText,
             selfDescription: selfDescription ? selfDescription.trim() : "",
             inputHash,
+            selectedTemplate,
             matchScore: aiReport.matchScore,
             techSkillsScore: aiReport.techSkillsScore || Math.round((aiReport.matchScore * 40) / 100),
             experienceScore: aiReport.experienceScore || Math.round((aiReport.matchScore * 30) / 100),
@@ -72,6 +114,8 @@ const generateReport = async (req, res) => {
             technicalQuestions: aiReport.technicalQuestions,
             behavioralQuestions: aiReport.behavioralQuestions,
             preparationPlan: aiReport.preparationPlan,
+            keywordMatrix: aiReport.keywordMatrix,
+            tailoredResumeData: preCachedResumeData,
         });
 
         return res.status(201).json({
@@ -197,20 +241,40 @@ const exportResumePDF = async (req, res) => {
             });
         }
 
-        // Generate structured, tailored 1-page ATS Resume matching the target JD
-        const { generateTailoredAtsResume } = require("../services/ai.service");
+        // Check if tailoredResumeData is already cached for this report
+        let tailoredResumeData = report.tailoredResumeData;
+
+        // Cache integrity check: if resumeText exists, verify cached candidate name matches uploaded resume
+        if (tailoredResumeData && report.resumeText) {
+            const firstLineResume = (report.resumeText || "").trim().split("\n")[0].toLowerCase();
+            const cachedNameLower = (tailoredResumeData.fullName || "").trim().toLowerCase();
+            const firstWord = cachedNameLower.split(/\s+/)[0];
+            if (firstWord && firstWord !== "candidate" && !firstLineResume.includes(firstWord)) {
+                console.warn(`[Resume Cache Invalidation] Cached name '${tailoredResumeData.fullName}' does not match uploaded resume. Re-generating dynamically.`);
+                tailoredResumeData = null;
+            }
+        }
+
+        if (!tailoredResumeData) {
+            const { generateTailoredAtsResume } = require("../services/ai.service");
+            tailoredResumeData = await generateTailoredAtsResume({
+                resumeText: report.resumeText,
+                jobDescription: report.jobDescription,
+                selfDescription: report.selfDescription,
+                user: req.user,
+                report: report,
+            });
+
+            // Cache tailored resume on report for instant subsequent downloads
+            report.tailoredResumeData = tailoredResumeData;
+            await report.save().catch(err => console.warn("[Cache Resume Warning]:", err.message));
+        }
+
+        const template = req.query.template || report.selectedTemplate || "nitw";
         const { generateResumePDFBuffer } = require("../services/pdf.service");
+        const pdfBuffer = await generateResumePDFBuffer(tailoredResumeData, template);
 
-        const tailoredResumeData = await generateTailoredAtsResume({
-            resumeText: report.resumeText,
-            jobDescription: report.jobDescription,
-            selfDescription: report.selfDescription,
-            user: req.user,
-        });
-
-        const pdfBuffer = await generateResumePDFBuffer(tailoredResumeData);
-
-        const filename = `Rolewise_ATS_Resume_${id}.pdf`;
+        const filename = `Rolewise_Resume_${template}_${id}.pdf`;
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
         res.setHeader("Content-Length", pdfBuffer.length);

@@ -28,8 +28,8 @@ export const deleteInterviewReportApi = async (id) => {
   return response.data;
 };
 
-export const downloadResumePdfApi = async (id) => {
-  const response = await api.get(`/interview/report/${id}/pdf`, {
+export const downloadResumePdfApi = async (id, template = "nitw") => {
+  const response = await api.get(`/interview/report/${id}/pdf?template=${template}`, {
     responseType: "blob",
   });
   return response.data;

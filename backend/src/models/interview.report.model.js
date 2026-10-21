@@ -103,6 +103,10 @@ const interviewReportSchema = new mongoose.Schema(
             index: true,
             default: "",
         },
+        selectedTemplate: {
+            type: String,
+            default: "nitw",
+        },
         matchScore: {
             type: Number,
             required: true,
@@ -145,6 +149,10 @@ const interviewReportSchema = new mongoose.Schema(
         completedRoadmapTasks: {
             type: [String],
             default: [],
+        },
+        tailoredResumeData: {
+            type: mongoose.Schema.Types.Mixed,
+            default: null,
         },
     },
     {

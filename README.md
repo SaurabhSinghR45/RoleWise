@@ -3,7 +3,7 @@
 AI-assisted career preparation and interview readiness platform. Analyzes resumes against job descriptions, identifies skill gaps, generates targeted interview questions, and exports ATS-friendly resumes.
 
 - **Live Application**: [https://role-wise.vercel.app](https://role-wise.vercel.app)
-- **API Status**: [https://rolewise-backend-94co.onrender.com/api/health](https://rolewise-backend-94co.onrender.com/api/health)
+- **Author**: Saurabh Singh
 
 ## Overview
 
